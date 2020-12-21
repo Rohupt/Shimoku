@@ -19,7 +19,15 @@ public class GameSettings {
         this.moveTimingEnabled = false;
         this.gameTimeMillis = 1200000;
         this.moveTimeMillis = 5000;
-        this.size = 15;
+        this.size = 19;
+    }
+    
+    public GameSettings(GameSettings origin) {
+        this.gameTimingEnabled = origin.gameTimingEnabled();
+        this.moveTimingEnabled = origin.moveTimingEnabled();
+        this.gameTimeMillis = origin.getGameTimeMillis();
+        this.moveTimeMillis = origin.getMoveTimeMillis();
+        this.size = origin.getSize();
     }
 
     /**
@@ -83,7 +91,7 @@ public class GameSettings {
      * @return Game timeout in milliseconds
      */
     public long getGameTimeMillis() {
-        return gameTimingEnabled ? this.gameTimeMillis : 0;
+        return this.gameTimeMillis;
     }
 
     /**
@@ -92,7 +100,7 @@ public class GameSettings {
      * @return Move timeout in milliseconds
      */
     public long getMoveTimeMillis() {
-        return moveTimingEnabled ? this.moveTimeMillis : 0;
+        return this.moveTimeMillis;
     }
 
     /**

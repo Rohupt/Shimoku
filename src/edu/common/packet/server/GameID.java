@@ -8,6 +8,7 @@ public class GameID extends Packet {
     private final String roomID;
 
     public GameID(String roomID) {
+        this.setId("01");
         this.roomID = roomID;
     }
 

@@ -2,12 +2,12 @@ package edu.client;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import javafx.application.Platform;
+import javafx.scene.image.Image;
 import javafx.stage.WindowEvent;
 
 /**
@@ -19,22 +19,15 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-        scene = new Scene(loadFXML("edu/client/gui/views/MainGUI"), 800, 600);
+        FXMLLoader fxmlLoader = new FXMLLoader(App.class.getClassLoader().getResource("edu/client/gui/views/MainGUI.fxml"));
+        scene = new Scene(fxmlLoader.load(), 960, 640);
         stage.setScene(scene);
+        stage.getIcons().add(new Image(getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
+        stage.setTitle("Shimoku");
         stage.show();
         stage.setOnCloseRequest((WindowEvent t) -> {
             Platform.exit();
             System.exit(0);
         });
     }
-
-    static void setRoot(String fxml) throws IOException {
-        scene.setRoot(loadFXML(fxml));
-    }
-
-    private static Parent loadFXML(String fxml) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(App.class.getClassLoader().getResource(fxml + ".fxml"));
-        return fxmlLoader.load();
-    }
-
 }

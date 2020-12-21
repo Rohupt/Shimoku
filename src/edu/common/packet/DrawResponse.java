@@ -7,8 +7,8 @@ public class DrawResponse extends Packet{
     private boolean agree;
 
     public DrawResponse(boolean agree) {
+        this.setId("0e");
         this.agree = agree;
-        this.setId(new String("0e"));
     }
 
     public boolean isAgree() {

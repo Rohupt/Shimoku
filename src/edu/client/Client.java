@@ -73,6 +73,7 @@ public class Client implements Runnable{
         try {
             Gson gson = new Gson();
             String data = gson.toJson(packet);
+            System.out.printf("Sent a packet: %s\n", data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {
@@ -104,4 +105,7 @@ public class Client implements Runnable{
         }
     }
 
+    public EventListener getListener() {
+        return listener;
+    }
 }

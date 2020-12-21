@@ -2,18 +2,27 @@
 package edu.client;
 
 import edu.common.engine.Room;
-import javafx.application.Application;
 
 public class ClientMain {
-    private Room room;
-    private Client client;
+    private static Room room;
+    private static Client client;
+
+    public static Client getClient() {
+        return client;
+    }
+
+    public static Room getRoom() {
+        return room;
+    }
+
+    public static void setRoom(Room room) {
+        ClientMain.room = room;
+    }
     
-	public static void main(String[] args) {
-        Client client = new Client("localhost", 27013);
+    public static void main(String[] args) {
+        client = new Client(args[0], Integer.parseInt(args[1]));
         if (client.connect()) {
-            //Application.launch(App.class, args);
             client.run();
         }
-        //Application.launch(App.class, args);
 	}
 }

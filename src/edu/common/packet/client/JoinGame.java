@@ -10,9 +10,9 @@ public class JoinGame extends Packet {
     private String username;
 
     public JoinGame(String roomID, String username) {
+        this.setId("04");
         this.roomID = roomID;
         this.username = username;
-        this.setId("04");
     }
 
     public String getRoomID() {

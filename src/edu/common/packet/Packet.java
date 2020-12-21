@@ -13,7 +13,7 @@ public class Packet implements Serializable {
         return id;
     }
 
-    public void setId(String id) {
+    protected void setId(String id) {
         this.id = id;
     }
 }

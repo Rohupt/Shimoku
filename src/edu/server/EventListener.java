@@ -8,9 +8,12 @@ import edu.common.packet.server.GameID;
 import edu.common.packet.server.GameInfo;
 import edu.common.packet.server.GuestFound;
 import edu.common.engine.Game;
+import edu.common.engine.GameSettings;
 import edu.common.engine.Move;
 import edu.common.engine.Player;
 import edu.common.engine.Room;
+import edu.common.packet.server.ConfirmRule;
+import edu.common.packet.server.JoinFailed;
 import edu.server.room.RoomList;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -29,6 +32,7 @@ public class EventListener {
             e.printStackTrace();
         }
         String packetID = (String) packetJson.get("id");
+        System.out.printf("Received a packet: %s\n", p);
 
         Gson gson = new Gson();
         switch (packetID){
@@ -90,8 +94,10 @@ public class EventListener {
      */
     public void handleCreateGame(CreateGame crtPacket,Connection con){
         Room room = new Room();
+        room.setSettings(new GameSettings());
         room.setHost(new Player(crtPacket.getUsername(),con));
         room.getHost().getConnection().setRoom(room);
+        con.setRoom(room);
 
         // Create new ID for this room
         room.setRoomID(ipToHex(con));
@@ -109,23 +115,34 @@ public class EventListener {
     public void handleRuleSet(RuleSet rulePacket, Connection con){
         //Only host client can set rule
         Room room = con.getRoom();
-        room.getSettings().setSize(rulePacket.getSize());
-
-        if(rulePacket.getGameTime() == -1){
-            room.getSettings().setGameTimingEnabled(false);
-        }else{
-            room.getSettings().setGameTimingEnabled(true);
-            room.getSettings().setGameTimeMillis(rulePacket.getGameTime());
+        GameSettings temp = new GameSettings(room.getSettings());
+        boolean successed = false;
+        try {
+            room.getSettings().setSize(rulePacket.getSize());
+            
+            if (rulePacket.getGameTime() == -1) {
+                room.getSettings().setGameTimingEnabled(false);
+            } else {
+                room.getSettings().setGameTimingEnabled(true);
+                room.getSettings().setGameTimeMillis(rulePacket.getGameTime());
+            }
+            
+            if (rulePacket.getMoveTime() == -1) {
+                room.getSettings().setMoveTimingEnabled(false);
+            } else {
+                room.getSettings().setMoveTimingEnabled(true);
+                room.getSettings().setMoveTimeMillis(rulePacket.getMoveTime());
+            }
+            successed = true;
+        } catch (Exception e) {
+            System.out.println("Rules changes failed");
+            room.setSettings(temp);
         }
+        
+        ConfirmRule crPacket = new ConfirmRule(successed);
+        con.sendObject(crPacket);
 
-        if(rulePacket.getMoveTime() == -1){
-            room.getSettings().setMoveTimingEnabled(false);
-        } else {
-            room.getSettings().setMoveTimingEnabled(true);
-            room.getSettings().setMoveTimeMillis(rulePacket.getMoveTime());
-        }
-
-        if (room.getGuest() != null) {
+        if (room.getGuest() != null && successed) {
             // end RuleSet packet to guest client
             room.getGuest().getConnection().sendObject(rulePacket);
         }
@@ -142,26 +159,27 @@ public class EventListener {
                 // Add guest player to room, add connection room -> connection
                 room.setGuest(new Player(joinPacket.getUsername(),con));
                 room.getGuest().getConnection().setRoom(room);
+                con.setRoom(room);
 
                 // Send guest found object to host
                 GuestFound guestFound = new GuestFound(joinPacket.getUsername());
                 room.getHost().getConnection().sendObject(guestFound);
 
                 // Send room info to guest
-                RuleSet ruleSet = new RuleSet(room.getGame().getSettings().getSize(),
-                                    room.getGame().getSettings().getGameTimeMillis(),
-                                    room.getGame().getSettings().getMoveTimeMillis());
+                RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
+                                    room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
+                                    room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);
                 GameInfo info = new GameInfo(ruleSet,room.getHost().getUsername());
                 con.sendObject(info);
+                return;
             }else{
-                // Room full
                 System.out.println("Room full, cannot join");
-                // Need a new packet, id = "10" or something
             }
         }else{
             System.out.println("Room not found, Join Request refused");
-            //Send back to client some code
         }
+        JoinFailed jfPacket = new JoinFailed(room != null);
+        con.sendObject(jfPacket);
     }
 
     /**
@@ -305,7 +323,7 @@ public class EventListener {
      */
     public Room findRoom(String roomID){
         for (Room x : RoomList.roomList){
-            if(x.getRoomID() == null ? roomID == null : x.getRoomID().equals(roomID.toLowerCase()))
+            if(x.getRoomID() == null ? roomID == null : x.getRoomID().equals(roomID))
                 return x;
         }
         return null;
@@ -360,11 +378,19 @@ public class EventListener {
     private String ipToHex(Connection con) {
         InetSocketAddress isa = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
         byte[] ia = isa.getAddress().getAddress();
-        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length - 1);
+        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length);
         int port = isa.getPort();
+        int code = ial4[0] * (int) Math.pow(256, 3) + ial4[1] * (int) Math.pow(256, 2)
+                + ial4[3] * (int) Math.pow(256, 1) + ial4[3] * (int) Math.pow(256, 0);
+        String set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%x", port));
-        for (byte b : ial4) { sb.append(String.format("%02x", b)); }
+        int r;
+        while (code != 0) {
+            r =(int) (code % set.length());
+            sb.append(set.charAt(r));
+            code = code / set.length();
+        }
+        sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
         return sb.toString();
     }
 }

@@ -86,6 +86,7 @@ public class Connection implements Runnable {
             Gson gson = new Gson();
             //Convert Object to json and to string
             String data = gson.toJson(packet);
+            System.out.printf("Sent a packet: %s\n", data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {
