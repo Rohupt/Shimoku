@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.Integer?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="640.0" minWidth="960.0" prefHeight="640.0" prefWidth="960.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="edu.client.gui.controllers.MainGUIController">
+   <right>
+      <VBox maxWidth="200.0" prefHeight="440.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
+         <padding>
+            <Insets bottom="8.0" left="4.0" right="8.0" top="4.0" />
+         </padding>
+         <children>
+            <VBox alignment="TOP_CENTER" prefHeight="270.0" prefWidth="188.0" spacing="8.0" style="-fx-border-color: #000;" VBox.vgrow="ALWAYS">
+               <padding>
+                  <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+               </padding>
+               <children>
+                  <Label fx:id="gameCodeLabel" alignment="CENTER" prefHeight="27.0" prefWidth="180.0" text="4a5b6c7d8e9f">
+                     <font>
+                        <Font name="System Bold" size="18.0" />
+                     </font>
+                  </Label>
+                  <Button fx:id="leaveBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Leave Game" />
+                  <Button fx:id="surrenderBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Surrender" />
+                  <Button fx:id="drawBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Offer Draw" />
+                  <VBox prefHeight="124.0" prefWidth="178.0" VBox.vgrow="ALWAYS" />
+                  <Button fx:id="startBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Start Game" />
+               </children>
+            </VBox>
+            <GridPane hgap="5" maxWidth="350.0" prefWidth="335.0" style="-fx-border-color: #000000;" vgap="5">
+               <columnConstraints>
+                  <ColumnConstraints percentWidth="60.0" />
+                  <ColumnConstraints percentWidth="40.0" />
+               </columnConstraints>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+               <rowConstraints>
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints minHeight="10.0" prefHeight="30.0" />
+               </rowConstraints>
+               <children>
+                  <Label styleClass="heading" text="Timing" GridPane.columnSpan="2" GridPane.rowIndex="0" />
+                  <Separator GridPane.columnSpan="2" GridPane.rowIndex="1" />
+                  <CheckBox fx:id="gameTimingCheckBox" onAction="#gameTimingEnabled" text="Game timing enabled" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+                  <Label text="Time/game (mins):" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                  <ComboBox fx:id="gameTimeComboBox" disable="true" maxWidth="Infinity" value="20" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                     <items>
+                        <FXCollections fx:factory="observableArrayList">
+                           <Integer fx:value="40" />
+                           <Integer fx:value="35" />
+                           <Integer fx:value="30" />
+                           <Integer fx:value="25" />
+                           <Integer fx:value="20" />
+                           <Integer fx:value="15" />
+                           <Integer fx:value="10" />
+                           <Integer fx:value="5" />
+                        </FXCollections>
+                     </items>
+                  </ComboBox>
+                  <CheckBox fx:id="moveTimingCheckBox" onAction="#moveTimingEnabled" text="Move timing enabled" GridPane.columnSpan="2" GridPane.rowIndex="5" />
+                  <Label text="Time/move (secs):" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+                  <ComboBox fx:id="moveTimeComboBox" disable="true" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="6">
+                     <items>
+                        <FXCollections fx:factory="observableArrayList">
+                           <Integer fx:value="40" />
+                           <Integer fx:value="35" />
+                           <Integer fx:value="30" />
+                           <Integer fx:value="25" />
+                           <Integer fx:value="20" />
+                           <Integer fx:value="15" />
+                           <Integer fx:value="10" />
+                           <Integer fx:value="5" />
+                           <Integer fx:value="2" />
+                        </FXCollections>
+                     </items>
+                  </ComboBox>
+                  <Label styleClass="heading" text="Board" GridPane.columnSpan="2" GridPane.rowIndex="7" />
+                  <Separator GridPane.columnSpan="2" GridPane.rowIndex="8" />
+                  <Label text="Board Size (n*n):" GridPane.columnIndex="0" GridPane.rowIndex="9" />
+                  <ComboBox fx:id="sizeComboBox" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="9">
+                     <items>
+                        <FXCollections fx:factory="observableArrayList">
+                           <Integer fx:value="15" />
+                           <Integer fx:value="19" />
+                        </FXCollections>
+                     </items>
+                  </ComboBox>
+                  <Button fx:id="confirmBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="105.0" text="Confirm" GridPane.rowIndex="10" />
+                  <Button fx:id="discardBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="105.0" text="Discard" GridPane.columnIndex="1" GridPane.rowIndex="10" />
+               </children>
+            </GridPane>
+         </children>
+      </VBox>
+   </right>
+   <top>
+      <HBox maxHeight="70.0" prefHeight="70.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
+         <children>
+            <GridPane fx:id="hostPane" hgap="2.0" maxWidth="252.0" minWidth="252.0" prefWidth="252.0" style="-fx-border-color: #000;" vgap="2.0">
+              <columnConstraints>
+                <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="100.0" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="72.0" minWidth="10.0" prefWidth="72.0" />
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="72.0" minWidth="10.0" prefWidth="72.0" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints maxHeight="35.0" minHeight="10.0" prefHeight="20.0" vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="54.0" minHeight="10.0" prefHeight="20.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+               <padding>
+                  <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+               </padding>
+               <children>
+                  <Label prefHeight="25.0" prefWidth="160.0" text="Host">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label prefHeight="25.0" prefWidth="75.0" text="Game time" GridPane.columnIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label prefHeight="25.0" prefWidth="75.0" text="Move time" GridPane.columnIndex="2">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="hostNameLabel" alignment="CENTER" prefHeight="25.0" prefWidth="160.0" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="player1GameTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="player1MoveTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+               </children>
+            </GridPane>
+            <Label fx:id="turnLabel" alignment="CENTER" minHeight="58.0" minWidth="100.0" prefHeight="60.0" prefWidth="100.0" style="-fx-border-color: #000000; -fx-background-color: #808080;" text=" Host (Black)" textAlignment="CENTER" wrapText="true">
+               <font>
+                  <Font name="System Bold" size="15.0" />
+               </font>
+            </Label>
+            <GridPane fx:id="guestPane" hgap="2.0" maxWidth="252.0" minWidth="252.0" prefWidth="252.0" style="-fx-border-color: #000;" vgap="2.0">
+               <columnConstraints>
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="100.0" minWidth="10.0" prefWidth="100.0" />
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="72.0" minWidth="10.0" prefWidth="72.0" />
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="72.0" minWidth="10.0" prefWidth="72.0" />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints maxHeight="35.0" minHeight="10.0" prefHeight="20.0" vgrow="SOMETIMES" />
+                  <RowConstraints maxHeight="54.0" minHeight="10.0" prefHeight="20.0" vgrow="SOMETIMES" />
+               </rowConstraints>
+               <padding>
+                  <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+               </padding>
+               <children>
+                  <Label prefHeight="25.0" prefWidth="160.0" text="Guest">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label prefHeight="25.0" prefWidth="75.0" text="Game time" GridPane.columnIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label prefHeight="25.0" prefWidth="75.0" text="Move time" GridPane.columnIndex="2">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="guestNameLabel" alignment="CENTER" prefHeight="25.0" prefWidth="160.0" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="guestGameTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="guestMoveTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+               </children>
+            </GridPane>
+            <VBox HBox.hgrow="ALWAYS" />
+            <GridPane fx:id="gamePane" hgap="2.0" maxWidth="360.0" prefWidth="360.0" style="-fx-border-color: #000;" vgap="2.0">
+               <columnConstraints>
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="75.0" minWidth="75.0" prefWidth="75.0" />
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="175.0" minWidth="10.0" prefWidth="175.0" />
+                  <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="100.0" minWidth="100.0" prefWidth="100.0" />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints minHeight="10.0" prefHeight="30.0" valignment="CENTER" vgrow="SOMETIMES" />
+                  <RowConstraints minHeight="10.0" prefHeight="30.0" valignment="CENTER" vgrow="SOMETIMES" />
+               </rowConstraints>
+               <padding>
+                  <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+               </padding>
+               <children>
+                  <Label prefHeight="25.0" prefWidth="147.0" text="Nickname">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <Label prefHeight="25.0" prefWidth="160.0" text="Game Code" GridPane.rowIndex="1">
+                     <padding>
+                        <Insets left="8.0" />
+                     </padding>
+                  </Label>
+                  <TextField fx:id="nameField" prefHeight="25.0" prefWidth="170.0" GridPane.columnIndex="1">
+                     <GridPane.margin>
+                        <Insets left="4.0" right="4.0" />
+                     </GridPane.margin>
+                  </TextField>
+                  <TextField fx:id="codeField" prefHeight="25.0" prefWidth="170.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                     <GridPane.margin>
+                        <Insets left="4.0" right="4.0" />
+                     </GridPane.margin>
+                  </TextField>
+                  <Button fx:id="createBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="99.0" text="Create Game" GridPane.columnIndex="2" />
+                  <Button fx:id="joinBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="100.0" text="Join Game" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+               </children>
+            </GridPane>
+         </children>
+         <padding>
+            <Insets bottom="4.0" left="8.0" right="8.0" top="8.0" />
+         </padding>
+      </HBox>
+   </top>
+</BorderPane>
