@@ -40,7 +40,7 @@ public class EventListener  {
             e.printStackTrace();
         }
         String packetID = (String) packetJson.get("id");
-        System.out.printf("Received a packet: %s\n", p);
+        System.out.printf("Received a packet:\n\t%s\n", p);
 
         Gson gson = new Gson();
         Platform.runLater(() -> {

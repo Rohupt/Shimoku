@@ -22,10 +22,12 @@ import edu.common.packet.client.*;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
  * FXML Controller class
@@ -245,13 +247,13 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleIDPacket(GameID idPacket) {
-        setPosition((byte) 1);
         Player host = new Player(nameField.getText(), null);
         Room room = new Room();
         room.setHost(host);
         room.setRoomID(idPacket.getRoomID());
         room.setSettings(new GameSettings());
         ClientMain.setRoom(room);
+        setPosition((byte) 1);
         hostNameLabel.setText(host.getUsername());
         guestNameLabel.setText("");
         codeLabel.setText(room.getRoomID());
@@ -320,6 +322,15 @@ public class MainGUIController implements Initializable {
         alert(AlertType.ERROR, "Error", header).showAndWait();
     }
 
+    public void handleOpponentLeft(OpponentLeft olPacket) {
+        String mesg = position == 2 ? "Opponent has left. You are the host of this room now." : "Opponent has left.";
+        Alert alert = isInGame ? alert(AlertType.INFORMATION, "Game ended", "Opponent has left. You won!")
+                : alert(AlertType.INFORMATION, "Notification", mesg);
+        exitGame();
+        setPosition((byte) 1);
+        alert.showAndWait();
+    }
+
     public void handleGameStart(GameStart gsPacket) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -330,15 +341,6 @@ public class MainGUIController implements Initializable {
 
     public void handleGameEnd(GameEnd gePacket) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    public void handleOpponentLeft(OpponentLeft olPacket) {
-        String mesg = position == 2 ? "Opponent has left. You are host of this room now." : "Opponent has left.";
-        Alert alert = isInGame ? alert(AlertType.INFORMATION, "Game ended", "Opponent has left. You won!")
-                : alert(AlertType.INFORMATION, "Notification", mesg);
-        exitGame();
-        setPosition((byte) 1);
-        alert.showAndWait();
     }
 
     public void handleDrawOffer(OfferDraw odPacket) {

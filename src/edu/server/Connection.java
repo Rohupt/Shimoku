@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.Map;
 
 public class Connection implements Runnable {
@@ -86,7 +87,7 @@ public class Connection implements Runnable {
             Gson gson = new Gson();
             //Convert Object to json and to string
             String data = gson.toJson(packet);
-            System.out.printf("Sent a packet: %s\n", data);
+            System.out.printf("Sent a packet: %s\n\t%s\n", this.ipToHex(), data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {
@@ -140,5 +141,25 @@ public class Connection implements Runnable {
 
     public void setRoom(Room room) {
         this.room = room;
+    }
+    
+    public String ipToHex() {
+        InetSocketAddress isa = (InetSocketAddress) this.getSocket().getRemoteSocketAddress();
+        if (isa == null) return null;
+        byte[] ia = isa.getAddress().getAddress();
+        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length);
+        int port = isa.getPort();
+        int code = ial4[0] * (int) Math.pow(256, 3) + ial4[1] * (int) Math.pow(256, 2)
+                + ial4[3] * (int) Math.pow(256, 1) + ial4[3] * (int) Math.pow(256, 0);
+        String set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        StringBuilder sb = new StringBuilder();
+        int r;
+        while (code != 0) {
+            r =(int) (code % set.length());
+            sb.append(set.charAt(r));
+            code = code / set.length();
+        }
+        sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
+        return sb.toString();
     }
 }

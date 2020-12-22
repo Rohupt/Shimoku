@@ -23,6 +23,8 @@ public class App extends Application {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getClassLoader().getResource("edu/client/gui/views/MainGUI.fxml"));
         scene = new Scene(fxmlLoader.load(), 960, 640);
         stage.setScene(scene);
+        stage.setMinHeight(640);
+        stage.setMinWidth(960);
         stage.getIcons().add(new Image(getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
         stage.setTitle("Shimoku");
         stage.show();

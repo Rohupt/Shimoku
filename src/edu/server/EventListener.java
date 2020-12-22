@@ -4,19 +4,9 @@ import edu.common.packet.RuleSet;
 import com.google.gson.Gson;
 import edu.common.packet.*;
 import edu.common.packet.client.*;
-import edu.common.packet.server.GameID;
-import edu.common.packet.server.GameInfo;
-import edu.common.packet.server.GuestFound;
-import edu.common.engine.Game;
-import edu.common.engine.GameSettings;
-import edu.common.engine.Move;
-import edu.common.engine.Player;
-import edu.common.engine.Room;
-import edu.common.packet.server.ConfirmRule;
-import edu.common.packet.server.JoinFailed;
+import edu.common.packet.server.*;
+import edu.common.engine.*;
 import edu.server.room.RoomList;
-import java.net.InetSocketAddress;
-import java.util.Arrays;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -32,7 +22,7 @@ public class EventListener {
             e.printStackTrace();
         }
         String packetID = (String) packetJson.get("id");
-        System.out.printf("Received a packet: %s\n", p);
+        System.out.printf("Received a packet: %s\n\t%s\n", con.ipToHex(), p);
 
         Gson gson = new Gson();
         switch (packetID){
@@ -100,7 +90,7 @@ public class EventListener {
         con.setRoom(room);
 
         // Create new ID for this room
-        room.setRoomID(Room.ipToHex(con));
+        room.setRoomID(con.ipToHex());
 
         // Add room to the end of room list
         RoomList.getRoomList().addLast(room);
@@ -297,7 +287,7 @@ public class EventListener {
         }
         if (room.checkHost(con)) {
             room.setHost(players[1]);
-            room.setRoomID(Room.ipToHex(room.getHost().getConnection()));
+            room.setRoomID(room.getHost().getConnection().ipToHex());
             RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
                                 room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
                                 room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);

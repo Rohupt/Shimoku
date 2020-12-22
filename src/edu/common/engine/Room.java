@@ -21,7 +21,7 @@ public class Room {
      */
     public Player[] getSortedPlayers(Connection con){
         Player[] roomPlayers = new Player[2];
-        if (ipToHex(host.getConnection()).equals(ipToHex(con))) {
+        if (host.getConnection().ipToHex().equals(con.ipToHex())) {
             roomPlayers[0] = host;
             roomPlayers[1] = guest;
         } else {
@@ -94,25 +94,5 @@ public class Room {
             return (room.roomID == null ? this.roomID == null : room.roomID.equals(this.roomID));
         }
         return false;
-    }
-
-    public static String ipToHex(Connection con) {
-        InetSocketAddress isa = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
-        if (isa == null) return null;
-        byte[] ia = isa.getAddress().getAddress();
-        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length);
-        int port = isa.getPort();
-        int code = ial4[0] * (int) Math.pow(256, 3) + ial4[1] * (int) Math.pow(256, 2)
-                + ial4[3] * (int) Math.pow(256, 1) + ial4[3] * (int) Math.pow(256, 0);
-        String set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        StringBuilder sb = new StringBuilder();
-        int r;
-        while (code != 0) {
-            r =(int) (code % set.length());
-            sb.append(set.charAt(r));
-            code = code / set.length();
-        }
-        sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
-        return sb.toString();
     }
 }
