@@ -156,7 +156,7 @@ public class Connection implements Runnable {
         int r;
         while (code != 0) {
             r =(int) (code % set.length());
-            sb.append(set.charAt(r));
+            sb.append(set.charAt(r >= 0 ? r : set.length() + r));
             code = code / set.length();
         }
         sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
