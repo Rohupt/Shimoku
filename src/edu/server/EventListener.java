@@ -100,11 +100,14 @@ public class EventListener {
         con.setRoom(room);
 
         // Create new ID for this room
-        room.setRoomID(ipToHex(con));
+        room.setRoomID(Room.ipToHex(con));
 
         // Add room to the end of room list
-        RoomList.roomList.addLast(room);
-        GameID gameID = new GameID(room.getRoomID());
+        RoomList.getRoomList().addLast(room);
+        RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
+                                room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
+                                room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);
+        GameID gameID = new GameID(room.getRoomID(), ruleSet);
         con.sendObject(gameID);
     }
 
@@ -227,7 +230,7 @@ public class EventListener {
         // Send EndGame Packet
         Room room = con.getRoom();
 
-        Player[] players = room.getPlayerByConnection(con);
+        Player[] players = room.getSortedPlayers(con);
         Player surPlayer = players[0];
         Player winPlayer = players[1];
 
@@ -251,7 +254,7 @@ public class EventListener {
     public void handleDrawRq(Connection con){
         Room room = con.getRoom();
 
-        Player[] players = room.getPlayerByConnection(con);
+        Player[] players = room.getSortedPlayers(con);
         Player drawPlayer = players[0];
         Player recvDrawPlayer = players[1];
 
@@ -268,7 +271,7 @@ public class EventListener {
             room.getGuest().getConnection().sendObject(gameEnd);
         }else{
             // Forward drawRs to other player to player resume Move
-            Player[] players = room.getPlayerByConnection(con);
+            Player[] players = room.getSortedPlayers(con);
             players[1].getConnection().sendObject(drawRs);
         }
     }
@@ -278,26 +281,51 @@ public class EventListener {
      */
     public void handleLeaveGame(Connection con){
         Room room = con.getRoom();
-        Player[] players = room.getPlayerByConnection(con);
+        Player[] players = room.getSortedPlayers(con);
+        if (players[1] == null) {
+            RoomList.getRoomList().remove(room);
+            return;
+        }
+        if (room.getGame() != null) {
+            room.getGame().stop();
+            room.removeGame();
+            GameEnd gameEnd = new GameEnd(room.checkHost(con) ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON,
+                    GameEnd.ReasonType.BY_OPPONENT_LEFT);
+            players[1].getConnection().sendObject(gameEnd);
+        } else {
+            players[1].getConnection().sendObject(new OpponentLeft());
+        }
+        if (room.checkHost(con)) {
+            room.setHost(players[1]);
+            room.setRoomID(Room.ipToHex(room.getHost().getConnection()));
+            RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
+                                room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
+                                room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);
+            room.getHost().getConnection().sendObject(new GameID(room.getRoomID(), ruleSet));
+        }
+        room.setGuest(null);
 
-        if (room.getGame().checkAlive()) {
-            Player winPlayer = players[1];
+        /*if (room.getGame() != null) {
+            if (room.getGame().checkAlive()) {
+                Player winPlayer = players[1];
 
-            GameEnd gameEnd = new GameEnd();
-            gameEnd.setReason(GameEnd.ReasonType.BY_OPPONENT_LEFT);
+                GameEnd gameEnd = new GameEnd();
+                gameEnd.setReason(GameEnd.ReasonType.BY_OPPONENT_LEFT);
 
-            if(winPlayer == room.getHost()){
-                gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
-            }else if (winPlayer == room.getGuest()){
-                gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
+                if(winPlayer == room.getHost()){
+                    gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
+                }else if (winPlayer == room.getGuest()){
+                    gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
+                }
+
+                // In this case only need to send to winner player
+                winPlayer.getConnection().sendObject(gameEnd);
             }
-
-            // In this case only need to send to winner player
-            winPlayer.getConnection().sendObject(gameEnd);
+            
 
             // If remain player is not host player set it host
             if(room.checkHost(con)){
-                room.setHost(winPlayer);
+                room.setHost(players[1]);
             }
             room.setGuest(null);
         } else {
@@ -313,7 +341,7 @@ public class EventListener {
 
             //Send ClientLeft object to remain player
             players[1].getConnection().sendObject(new OpponentLeft());
-        }
+        }*/
     }
 
     /**
@@ -322,7 +350,7 @@ public class EventListener {
      * Find a room in room list with id
      */
     public Room findRoom(String roomID){
-        for (Room x : RoomList.roomList){
+        for (Room x : RoomList.getRoomList()){
             if(x.getRoomID() == null ? roomID == null : x.getRoomID().equals(roomID))
                 return x;
         }
@@ -373,24 +401,5 @@ public class EventListener {
         // OpponentLeft
         // OfferDraw
         // DrawResponse
-    }
-    
-    private String ipToHex(Connection con) {
-        InetSocketAddress isa = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
-        byte[] ia = isa.getAddress().getAddress();
-        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length);
-        int port = isa.getPort();
-        int code = ial4[0] * (int) Math.pow(256, 3) + ial4[1] * (int) Math.pow(256, 2)
-                + ial4[3] * (int) Math.pow(256, 1) + ial4[3] * (int) Math.pow(256, 0);
-        String set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        StringBuilder sb = new StringBuilder();
-        int r;
-        while (code != 0) {
-            r =(int) (code % set.length());
-            sb.append(set.charAt(r));
-            code = code / set.length();
-        }
-        sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
-        return sb.toString();
     }
 }

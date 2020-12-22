@@ -108,4 +108,8 @@ public class Client implements Runnable{
     public EventListener getListener() {
         return listener;
     }
+
+    public Socket getSocket() {
+        return socket;
+    }
 }

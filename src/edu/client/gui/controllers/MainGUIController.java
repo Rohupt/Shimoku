@@ -19,8 +19,12 @@ import edu.common.engine.*;
 import edu.common.packet.*;
 import edu.common.packet.server.*;
 import edu.common.packet.client.*;
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import javafx.scene.layout.VBox;
 
 /**
@@ -35,9 +39,9 @@ public class MainGUIController implements Initializable {
     @FXML
     private Label hostNameLabel;
     @FXML
-    private Label player1GameTimeLabel;
+    private Label hostGameTimeLabel;
     @FXML
-    private Label player1MoveTimeLabel;
+    private Label hostMoveTimeLabel;
     @FXML
     private GridPane guestPane;
     @FXML
@@ -69,7 +73,9 @@ public class MainGUIController implements Initializable {
     @FXML
     private Button discardBtn;
     @FXML
-    private Label gameCodeLabel;
+    private Label codeLabel;
+    @FXML
+    private Button copyBtn;
     @FXML
     private Button leaveBtn;
     @FXML
@@ -91,6 +97,8 @@ public class MainGUIController implements Initializable {
     //</editor-fold>
     
     private EventListener listener;
+    private boolean isInGame;
+    private byte position; // 1 is host, 2 is guest, 0 is not set
 
     public void setListener(EventListener listener) {
         this.listener = listener;
@@ -101,9 +109,10 @@ public class MainGUIController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        isInGame = false;
+        setPosition((byte) 0);
         listener = ClientMain.getClient().getListener();
         listener.setController(this);
-        gameBtnPane.setDisable(true);
         createBtn.setDisable(true);
         joinBtn.setDisable(true);
         nameField.requestFocus();
@@ -118,13 +127,16 @@ public class MainGUIController implements Initializable {
     private void addHandlers() {
         nameField.textProperty().addListener((b, o, n) -> fieldChanged());
         codeField.textProperty().addListener((b, o, n) -> fieldChanged());
+        codeLabel.textProperty().addListener((b, o, n) -> copyBtn.setDisable(codeLabel.getText().isBlank()));
         gameTimingCheckBox.selectedProperty().addListener((b, o, n) -> gameTimingEnabled());
         moveTimingCheckBox.selectedProperty().addListener((b, o, n) -> moveTimingEnabled());
         
         createBtn.setOnAction(e -> createGame());
         joinBtn.setOnAction(e -> joinGame());
+        copyBtn.setOnAction(e -> copyCode());
         confirmBtn.setOnAction(e -> updateSettings());
         discardBtn.setOnAction(e -> loadSettings());
+        leaveBtn.setOnAction(e -> leaveRoom());
     }
     
     private void fieldChanged() {
@@ -132,14 +144,61 @@ public class MainGUIController implements Initializable {
         joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
     }
     
+    private void copyCode() {
+        final ClipboardContent content = new ClipboardContent();
+        content.put(DataFormat.PLAIN_TEXT, codeLabel.getText());
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+    
     private void createGame() {
-        CreateGame cgPacket = new CreateGame(nameField.getText());
-        ClientMain.getClient().sendObject(cgPacket);
+        ClientMain.getClient().sendObject(new CreateGame(nameField.getText()));
     }
     
     private void joinGame() {
-        JoinGame jgPacket = new JoinGame(codeField.getText(), nameField.getText());
-        ClientMain.getClient().sendObject(jgPacket);
+        ClientMain.getClient().sendObject(new JoinGame(codeField.getText(), nameField.getText()));
+    }
+    
+    private void leaveRoom() {
+        exitGame();
+        position = 0;
+        hostNameLabel.setText("");
+        guestNameLabel.setText("");
+        ClientMain.setRoom(null);
+        gamePane.setDisable(false);
+        gameBtnPane.setDisable(true);
+        settingsPane.setDisable(true);
+        ClientMain.getClient().sendObject(new LeaveGame());
+    }
+    
+    private void setPosition(byte p) {
+        position = p;
+        if (p == 0) {
+            codeLabel.setText("");
+            hostNameLabel.setText("");
+            guestNameLabel.setText("");
+            hostGameTimeLabel.setText("");
+            hostMoveTimeLabel.setText("");
+            guestGameTimeLabel.setText("");
+            guestMoveTimeLabel.setText("");
+        }
+        if (p == 1) {
+            guestNameLabel.setText("");
+            ClientMain.getRoom().setGuest(null);
+            startBtn.setDisable(true);
+        }
+        gamePane.setDisable(p != 0);
+        gameBtnPane.setDisable(p == 0);
+        settingsPane.setDisable(p != 1);
+    }
+    
+    private void exitGame() {
+        if (isInGame) {
+            isInGame = false;
+        }
+        hostGameTimeLabel.setText("");
+        hostMoveTimeLabel.setText("");
+        guestGameTimeLabel.setText("");
+        guestMoveTimeLabel.setText("");
     }
     
     private void loadSettings() {
@@ -186,6 +245,7 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleIDPacket(GameID idPacket) {
+        setPosition((byte) 1);
         Player host = new Player(nameField.getText(), null);
         Room room = new Room();
         room.setHost(host);
@@ -193,14 +253,12 @@ public class MainGUIController implements Initializable {
         room.setSettings(new GameSettings());
         ClientMain.setRoom(room);
         hostNameLabel.setText(host.getUsername());
-        gameCodeLabel.setText(room.getRoomID());
+        guestNameLabel.setText("");
+        codeLabel.setText(room.getRoomID());
         loadSettings();
-        gamePane.setDisable(true);
-        settingsPane.setDisable(false);
-        gameBtnPane.setDisable(false);
     }
 
-    public void handleRuleChanges(RuleSet rsPacket) {
+    public void handleRuleChanges(RuleSet rsPacket, boolean alerted) {
         ClientMain.getRoom().getSettings().setGameTimingEnabled(rsPacket.getGameTime() != -1);
         ClientMain.getRoom().getSettings().setMoveTimingEnabled(rsPacket.getMoveTime() != -1);
         if (ClientMain.getRoom().getSettings().gameTimingEnabled())
@@ -209,6 +267,8 @@ public class MainGUIController implements Initializable {
             ClientMain.getRoom().getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
         ClientMain.getRoom().getSettings().setSize(rsPacket.getSize());
         loadSettings();
+        if (alerted)
+            alert(AlertType.WARNING, "Warning", "Game rules changed").show();
     }
 
     public void handleRuleConfirmed(ConfirmRule cfPacket) {
@@ -237,6 +297,7 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleGameInfo(GameInfo giPacket) {
+        setPosition((byte) 2);
         Player host = new Player(giPacket.getHostUsername(), null);
         Player guest = new Player(nameField.getText(), null);
         Room room = new Room();
@@ -245,14 +306,11 @@ public class MainGUIController implements Initializable {
         room.setRoomID(codeField.getText());
         room.setSettings(new GameSettings());
         ClientMain.setRoom(room);
-        handleRuleChanges(giPacket.getRuleSet());
+        handleRuleChanges(giPacket.getRuleSet(), false);
         hostNameLabel.setText(host.getUsername());
         guestNameLabel.setText(guest.getUsername());
-        gameCodeLabel.setText(room.getRoomID());
-        settingsPane.setDisable(true);
-        gamePane.setDisable(true);
+        codeLabel.setText(room.getRoomID());
         startBtn.setDisable(true);
-        gameBtnPane.setDisable(false);
     }
 
     public void handleJoinFailed(JoinFailed jfPacket) {
@@ -275,7 +333,12 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleOpponentLeft(OpponentLeft olPacket) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String mesg = position == 2 ? "Opponent has left. You are host of this room now." : "Opponent has left.";
+        Alert alert = isInGame ? alert(AlertType.INFORMATION, "Game ended", "Opponent has left. You won!")
+                : alert(AlertType.INFORMATION, "Notification", mesg);
+        exitGame();
+        setPosition((byte) 1);
+        alert.showAndWait();
     }
 
     public void handleDrawOffer(OfferDraw odPacket) {

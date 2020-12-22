@@ -1,5 +1,6 @@
 package edu.client;
 
+import edu.common.packet.LeaveGame;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -26,6 +27,9 @@ public class App extends Application {
         stage.setTitle("Shimoku");
         stage.show();
         stage.setOnCloseRequest((WindowEvent t) -> {
+            if (ClientMain.getRoom() != null)
+                ClientMain.getClient().sendObject(new LeaveGame());
+            ClientMain.getClient().close();
             Platform.exit();
             System.exit(0);
         });

@@ -1,6 +1,8 @@
 package edu.common.engine;
 
 import edu.server.Connection;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import java.util.Objects;
 
@@ -17,16 +19,14 @@ public class Room {
      * players[0] = player with this con
      * players[1] = player remainder
      */
-    public Player[] getPlayerByConnection(Connection con){
+    public Player[] getSortedPlayers(Connection con){
         Player[] roomPlayers = new Player[2];
-        if(getGuest().getConnection() == con){
-            roomPlayers[0] = getGuest();
-            roomPlayers[1] = getHost();
-        }else if(getHost().getConnection() == con){
-            roomPlayers[0] = getHost();
-            roomPlayers[1] = getGuest();
-        }else{
-            return null;
+        if (ipToHex(host.getConnection()).equals(ipToHex(con))) {
+            roomPlayers[0] = host;
+            roomPlayers[1] = guest;
+        } else {
+            roomPlayers[0] = guest;
+            roomPlayers[1] = host;
         }
         return roomPlayers;
     }
@@ -71,6 +71,10 @@ public class Room {
         return game;
     }
     
+    public void removeGame() {
+        this.game = null;
+    }
+    
     public void newGame(GameSettings settings) {
         Game newGame = new Game(settings);
         newGame.setPlayer1(host);
@@ -92,4 +96,23 @@ public class Room {
         return false;
     }
 
+    public static String ipToHex(Connection con) {
+        InetSocketAddress isa = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
+        if (isa == null) return null;
+        byte[] ia = isa.getAddress().getAddress();
+        byte[] ial4 = Arrays.copyOfRange(ia, ia.length - 4, ia.length);
+        int port = isa.getPort();
+        int code = ial4[0] * (int) Math.pow(256, 3) + ial4[1] * (int) Math.pow(256, 2)
+                + ial4[3] * (int) Math.pow(256, 1) + ial4[3] * (int) Math.pow(256, 0);
+        String set = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        StringBuilder sb = new StringBuilder();
+        int r;
+        while (code != 0) {
+            r =(int) (code % set.length());
+            sb.append(set.charAt(r));
+            code = code / set.length();
+        }
+        sb.append(set.charAt(port % set.length())).append(set.charAt(port / set.length() % set.length()));
+        return sb.toString();
+    }
 }

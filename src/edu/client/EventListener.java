@@ -51,9 +51,9 @@ public class EventListener  {
                     controller.handleIDPacket(idPacket);
                     break;
                 case "02":
-                    //Rule set, only guest clients receive this
+                    //Rule set
                     RuleSet rsPacket = gson.fromJson(p, RuleSet.class);
-                    controller.handleRuleChanges(rsPacket);
+                    controller.handleRuleChanges(rsPacket, true);
                     break;
                 case "03":
                     //Confirm rule changes

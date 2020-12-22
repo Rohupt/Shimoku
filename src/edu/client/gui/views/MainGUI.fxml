@@ -22,21 +22,26 @@
             <Insets bottom="8.0" left="4.0" right="8.0" top="4.0" />
          </padding>
          <children>
-            <VBox fx:id="gameBtnPane" alignment="TOP_CENTER" prefHeight="270.0" prefWidth="188.0" spacing="8.0" style="-fx-border-color: #000;" VBox.vgrow="ALWAYS">
+            <VBox fx:id="gameBtnPane" alignment="TOP_CENTER" prefHeight="270.0" prefWidth="188.0" spacing="4.0" style="-fx-border-color: #000;" VBox.vgrow="ALWAYS">
                <padding>
                   <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
                </padding>
                <children>
-                  <Label fx:id="gameCodeLabel" alignment="CENTER" prefHeight="27.0" prefWidth="180.0">
-                     <font>
-                        <Font name="System Bold" size="18.0" />
-                     </font>
-                  </Label>
-                  <Button fx:id="leaveBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Leave Game" />
-                  <Button fx:id="surrenderBtn" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Surrender" />
-                  <Button fx:id="drawBtn" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Offer Draw" />
-                  <VBox prefHeight="124.0" prefWidth="178.0" VBox.vgrow="ALWAYS" />
+                  <HBox prefHeight="25.0" prefWidth="178.0" spacing="3.0">
+                     <children>
+                        <Label fx:id="codeLabel" alignment="CENTER" contentDisplay="CENTER" prefHeight="25.0" prefWidth="120.0">
+                           <font>
+                              <Font name="System Bold" size="14.0" />
+                           </font>
+                        </Label>
+                        <Button fx:id="copyBtn" contentDisplay="CENTER" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="55.0" text="Copy" />
+                     </children>
+                  </HBox>
                   <Button fx:id="startBtn" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Start Game" />
+                  <VBox prefHeight="124.0" prefWidth="178.0" VBox.vgrow="ALWAYS" />
+                  <Button fx:id="drawBtn" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Offer Draw" />
+                  <Button fx:id="surrenderBtn" disable="true" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Surrender" />
+                  <Button fx:id="leaveBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="180.0" text="Leave Room" />
                </children>
             </VBox>
             <GridPane fx:id="settingsPane" hgap="5" maxWidth="350.0" prefWidth="335.0" style="-fx-border-color: #000000;" vgap="5">
@@ -120,12 +125,12 @@
                         <Font name="System Bold" />
                      </font>
                   </Label>
-                  <Label fx:id="player1GameTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                  <Label fx:id="hostGameTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
                      <padding>
                         <Insets left="8.0" />
                      </padding>
                   </Label>
-                  <Label fx:id="player1MoveTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                  <Label fx:id="hostMoveTimeLabel" alignment="CENTER" prefHeight="25.0" prefWidth="72.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
                      <padding>
                         <Insets left="8.0" />
                      </padding>
@@ -186,7 +191,7 @@
                   </Label>
                </children>
             </GridPane>
-            <VBox HBox.hgrow="ALWAYS" />
+            <VBox style="-fx-border-color: #000;" HBox.hgrow="ALWAYS" />
             <GridPane fx:id="gamePane" hgap="2.0" maxWidth="360.0" prefWidth="360.0" style="-fx-border-color: #000;" vgap="2.0">
                <columnConstraints>
                   <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="75.0" minWidth="75.0" prefWidth="75.0" />
@@ -206,7 +211,7 @@
                         <Insets left="8.0" />
                      </padding>
                   </Label>
-                  <Label prefHeight="25.0" prefWidth="160.0" text="Game Code" GridPane.rowIndex="1">
+                  <Label prefHeight="25.0" prefWidth="160.0" text="Room Code" GridPane.rowIndex="1">
                      <padding>
                         <Insets left="8.0" />
                      </padding>
