@@ -3,3 +3,9 @@ build/
 nbproject/
 dist/
 test/
+.DS_Store
+.idea/
+Shimoku.iml
+out/
+src/.DS_Store
+src/edu/.DS_Store
