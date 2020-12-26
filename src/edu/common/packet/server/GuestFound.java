@@ -8,7 +8,7 @@ public class GuestFound extends Packet {
     private String username;
 
     public GuestFound(String username) {
-        this.setId("05");
+        this.setId("gf");
         this.username = username;
     }
 

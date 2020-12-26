@@ -11,7 +11,7 @@ public class GameID extends Packet {
     private final RuleSet ruleSet;
 
     public GameID(String roomID, RuleSet ruleSet) {
-        this.setId("01");
+        this.setId("id");
         this.roomID = roomID;
         this.ruleSet = ruleSet;
     }

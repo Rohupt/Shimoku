@@ -26,62 +26,48 @@ public class EventListener {
 
         Gson gson = new Gson();
         switch (packetID){
-            case "00":
+            case "cg":
                 //Create Game
-                CreateGame crtPacket = gson.fromJson(p,CreateGame.class);
-                handleCreateGame(crtPacket,con);
+                handleCreateGame(gson.fromJson(p,CreateGame.class), con);
                 break;
-            case "02":
+            case "rs":
                 //RuleSet
-                RuleSet rulePacket = gson.fromJson(p,RuleSet.class);
-                handleRuleSet(rulePacket,con);
+                handleRuleSet(gson.fromJson(p,RuleSet.class),con);
                 break;
-            case "04":
+            case "jg":
                 //Join Game
-                JoinGame joinPacket = gson.fromJson(p,JoinGame.class);
-                handleJoinGame(joinPacket,con);
+                handleJoinGame(gson.fromJson(p,JoinGame.class),con);
                 break;
-            case "07":
+            case "sr":
                 //Start Request
-                StartRequest startRq = gson.fromJson(p,StartRequest.class);
-                handleStartRq(startRq,con);
+                handleStartRq(gson.fromJson(p,StartRequest.class),con);
                 break;
-            case "09":
+            case "sp":
                 //Stone Put
-                StonePut stone = gson.fromJson(p,StonePut.class);
-                handleStonePutRq(stone,con);
+                handleStonePutRq(gson.fromJson(p,StonePut.class),con);
                 break;
-            case "0a":
+            case "su":
                 //Surrender
                 // If a player surrender -> GameEnd
-                Surrender surPacket = gson.fromJson(p,Surrender.class);
-                handleSurPacket(surPacket,con);
+                handleSurPacket(gson.fromJson(p,Surrender.class),con);
                 break;
-            case "0b":
+            case "lg":
                 //Leave Game
-                // If opponent left the winner is the remainder
-                // Send GameEnd to only winner
                 handleLeaveGame(con);
                 break;
-            case "0d":
+            case "od":
                 //Offer Draw
-                handleDrawRq(con);
+                handleDrawOffer(con);
                 break;
-            case "0e":
+            case "dr":
                 //Draw Response
-                DrawResponse drawRs = gson.fromJson(p,DrawResponse.class);
-                handleDrawRs(drawRs,con);
+                handleDrawRs(gson.fromJson(p,DrawResponse.class),con);
                 break;
             default:
                 break;
         }
     }
 
-    /**
-     * @param crtPacket
-     * @param con
-     * Handle packet create new room
-     */
     public void handleCreateGame(CreateGame crtPacket,Connection con){
         Room room = new Room();
         room.setSettings(new GameSettings());
@@ -101,10 +87,6 @@ public class EventListener {
         con.sendObject(gameID);
     }
 
-    /**
-     * @param rulePacket
-     * @param con
-     */
     public void handleRuleSet(RuleSet rulePacket, Connection con){
         //Only host client can set rule
         Room room = con.getRoom();
@@ -141,10 +123,6 @@ public class EventListener {
         }
     }
 
-    /**
-     * @param joinPacket
-     * @param con
-     */
     public void handleJoinGame(JoinGame joinPacket, Connection con){
         Room room = findRoom(joinPacket.getRoomID());
         if(room != null) {
@@ -175,10 +153,6 @@ public class EventListener {
         con.sendObject(jfPacket);
     }
 
-    /**
-     * @param startRq
-     * @param con
-     */
     public void handleStartRq(StartRequest startRq, Connection con){
         Room room = con.getRoom(); // Get room from connection
         if(room != null){
@@ -197,10 +171,6 @@ public class EventListener {
         }
     }
 
-    /**
-     * @param stone
-     * @param con
-     */
     public void handleStonePutRq(StonePut stone,Connection con){
         Move newMove = new Move(stone.getX(),stone.getY());
         Game game = con.getRoom().getGame();
@@ -211,11 +181,6 @@ public class EventListener {
         }
     }
 
-    /**
-     *
-     * @param surPacket
-     * @param con
-     */
     public void handleSurPacket(Surrender surPacket,Connection con){
         // Send EndGame Packet
         Room room = con.getRoom();
@@ -237,11 +202,7 @@ public class EventListener {
         surPlayer.getConnection().sendObject(gameEnd);
     }
 
-    /**
-     * Receive OfferDraw Packet and forward to other player
-     * @param con
-     */
-    public void handleDrawRq(Connection con){
+    public void handleDrawOffer(Connection con){
         Room room = con.getRoom();
 
         Player[] players = room.getSortedPlayers(con);
@@ -266,9 +227,6 @@ public class EventListener {
         }
     }
 
-    /**
-     * @param con
-     */
     public void handleLeaveGame(Connection con){
         Room room = con.getRoom();
         Player[] players = room.getSortedPlayers(con);
@@ -334,11 +292,6 @@ public class EventListener {
         }*/
     }
 
-    /**
-     * @param roomID
-     * @return room found
-     * Find a room in room list with id
-     */
     public Room findRoom(String roomID){
         for (Room x : RoomList.getRoomList()){
             if(x.getRoomID() == null ? roomID == null : x.getRoomID().equals(roomID))
@@ -347,12 +300,6 @@ public class EventListener {
         return null;
     }
 
-    /**
-     * @param p
-     * @param con
-     * Function to received object from client
-     * Classify request packet and execute
-     */
     public void received(Object p, Connection con){
         if(p instanceof CreateGame){
             CreateGame crtPacket = (CreateGame)p;
@@ -380,7 +327,7 @@ public class EventListener {
         }else if(p instanceof OfferDraw){
             // A player send draw offer request to another player
             OfferDraw drawRq = (OfferDraw)p;
-            handleDrawRq(con);
+            handleDrawOffer(con);
         }else if(p instanceof DrawResponse){
             // A player received draw offer request and response
             DrawResponse drawRs = (DrawResponse)p;
