@@ -9,7 +9,7 @@ public class StonePut extends Packet {
     private int y;
 
     public StonePut(int x, int y) {
-        this.setId("09");
+        this.setId("sp");
         this.x = x;
         this.y = y;
     }
