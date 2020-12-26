@@ -26,6 +26,7 @@ import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -36,6 +37,8 @@ import javafx.stage.Stage;
  */
 public class MainGUIController implements Initializable {
     //<editor-fold defaultstate="collapsed" desc="Element declarations">
+    @FXML
+    private BorderPane parent;
     @FXML
     private GridPane hostPane;
     @FXML
@@ -138,6 +141,7 @@ public class MainGUIController implements Initializable {
         copyBtn.setOnAction(e -> copyCode());
         confirmBtn.setOnAction(e -> updateSettings());
         discardBtn.setOnAction(e -> loadSettings());
+        startBtn.setOnAction(e -> startGame());
         leaveBtn.setOnAction(e -> leaveRoom());
     }
     
@@ -158,6 +162,12 @@ public class MainGUIController implements Initializable {
     
     private void joinGame() {
         ClientMain.getClient().sendObject(new JoinGame(codeField.getText(), nameField.getText()));
+    }
+    
+    private void startGame() {
+        //ClientMain.getClient().sendObject(new StartRequest());
+        board = new BoardPane(ClientMain.getRoom().getSettings().getSize());
+        parent.setCenter(board);
     }
     
     private void leaveRoom() {

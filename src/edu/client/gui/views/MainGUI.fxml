@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="640.0" minWidth="960.0" prefHeight="640.0" prefWidth="960.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="edu.client.gui.controllers.MainGUIController">
+<BorderPane fx:id="parent" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="640.0" minWidth="960.0" prefHeight="640.0" prefWidth="960.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="edu.client.gui.controllers.MainGUIController">
    <right>
       <VBox maxWidth="200.0" prefHeight="440.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
          <padding>
