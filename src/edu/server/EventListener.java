@@ -206,8 +206,8 @@ public class EventListener {
             GameEnd gameEnd = new GameEnd(room.checkHost(con) ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON,
                     GameEnd.ReasonType.BY_OPPONENT_LEFT);
             players[1].getConnection().sendObject(gameEnd);
-        } else {
-            players[1].getConnection().sendObject(new OpponentLeft());
+        } else if (!room.checkHost(con)) {
+            room.getHost().getConnection().sendObject(new OpponentLeft());
         }
         if (room.checkHost(con)) {
             room.setHost(players[1]);

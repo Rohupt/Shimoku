@@ -25,6 +25,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
@@ -35,6 +36,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.Stage;
 
 /**
  * FXML Controller class
@@ -204,6 +206,7 @@ public class MainGUIController implements Initializable {
         alert.setTitle(title);
         alert.setContentText(content);
         alert.setHeaderText(null);
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(this.getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
         return alert;
     }
     
@@ -359,7 +362,7 @@ public class MainGUIController implements Initializable {
         room.setSettings(idPacket.getRuleSet().toGameSettings());
         ClientMain.setRoom(room);
         if (position == 2)
-            notifBoard.appendText("You are the host of this room now. The game code has changed.\n");
+            notifBoard.appendText("Opponent has left. You are the host of this room now. The game code has changed.\n");
         setPosition((byte) 1, true);
         hostNameLabel.setText(host.getUsername());
         guestNameLabel.setText("");
