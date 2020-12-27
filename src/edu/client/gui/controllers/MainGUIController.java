@@ -324,7 +324,7 @@ public class MainGUIController implements Initializable {
         Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to offer a draw?");
         alert.getButtonTypes().clear();
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.");
+        notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES) {
             sendObject(new OfferDraw());
