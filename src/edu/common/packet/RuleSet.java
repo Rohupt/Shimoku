@@ -1,7 +1,7 @@
 package edu.common.packet;
 
 import com.google.gson.annotations.SerializedName;
-import edu.common.packet.Packet;
+import edu.common.engine.GameSettings;
 
 public class RuleSet extends Packet {
     @SerializedName("size")
@@ -40,5 +40,17 @@ public class RuleSet extends Packet {
 
     public void setMoveTime(long moveTime) {
         this.moveTime = moveTime;
+    }
+    
+    public GameSettings toGameSettings() {
+        GameSettings gs = new GameSettings();
+        gs.setSize(this.getSize());
+        gs.setGameTimingEnabled(this.getGameTime() != -1);
+        gs.setMoveTimingEnabled(this.getMoveTime() != -1);
+        if (gs.gameTimingEnabled())
+            gs.setGameTimeMillis(this.getGameTime());
+        if (gs.moveTimingEnabled())
+            gs.setMoveTimeMillis(this.getMoveTime());
+        return gs;
     }
 }

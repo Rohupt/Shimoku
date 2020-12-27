@@ -76,7 +76,7 @@ public class Room {
     }
     
     public void newGame(GameSettings settings) {
-        Game newGame = new Game(settings);
+        Game newGame = new Game(settings, this);
         newGame.setPlayer1(host);
         newGame.setPlayer2(guest);
         this.game = newGame;

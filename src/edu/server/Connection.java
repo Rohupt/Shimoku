@@ -51,7 +51,7 @@ public class Connection implements Runnable {
 //              Execute object received
                 listener.received_data(data, this);
             } catch (IOException e) {
-                System.out.printf("Client disconnected: %s, %d\n", remoteAddress.getAddress().toString(), remoteAddress.getPort());
+                System.out.printf("Client disconnected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());
                 break;
             }
         }
@@ -82,12 +82,13 @@ public class Connection implements Runnable {
      * Send string of response object to Client Socket
      */
     public void sendObject(Object packet) {
+        InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
         try {
 //            out.reset();
             Gson gson = new Gson();
             //Convert Object to json and to string
             String data = gson.toJson(packet);
-            System.out.printf("Sent a packet: %s\n\t%s\n", this.ipToHex(), data);
+            System.out.printf("Sent a packet: %s:%s\n\t%s\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {

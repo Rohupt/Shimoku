@@ -13,10 +13,10 @@ import java.util.List;
  */
 public class GameState {
 
-    private int size;
+    private final int size;
     private final int[][] board;
     private final LinkedList<Move> moves;
-    private int currentIndex = 1;
+    private int currentIndex;
 
     /**
      * Create a new game state.
@@ -26,6 +26,7 @@ public class GameState {
         this.size = size;
         this.board = new int[size][size];
         this.moves = new LinkedList<>();
+        this.currentIndex = 1;
     }
 
     /**
@@ -69,26 +70,10 @@ public class GameState {
      * @param move Move to make
      */
     protected void makeMove(Move move) {
-        this.moves.addLast(move);
+        this.moves.addFirst(move);
         this.board[move.row][move.col] = currentIndex;
         this.currentIndex = currentIndex == 1 ? 2 : 1;
     }
-
-    //<editor-fold defaultstate="collapsed" desc="undo">
-    /**
-     * Undo the last move and return it.
-     * @return Move that was removed from the state, or null if no moves exist
-     */
-    /*protected Move undo() {
-    if(this.moves.empty()) {
-    return null;
-    }
-    Move move = this.moves.pop();
-    this.board[move.row][move.col] = 0;
-    this.currentIndex = currentIndex == 1 ? 2: 1;
-    return move;
-    }*/
-    //</editor-fold>
 
     /**
      * Determine if the specified player has won the game
@@ -206,9 +191,5 @@ public class GameState {
 
     public int getSize() {
         return size;
-    }
-
-    public void setSize(int size) {
-        this.size = size;
     }
 }

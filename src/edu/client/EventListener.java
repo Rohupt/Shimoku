@@ -53,7 +53,7 @@ public class EventListener  {
                 case "02":
                     //Rule set
                     RuleSet rsPacket = gson.fromJson(p, RuleSet.class);
-                    controller.handleRuleChanges(rsPacket, true);
+                    controller.handleRuleChanges(rsPacket);
                     break;
                 case "03":
                     //Confirm rule changes

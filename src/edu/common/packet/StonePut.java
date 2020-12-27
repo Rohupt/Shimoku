@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 public class StonePut extends Packet {
     @SerializedName("x")
     private int x;
-    @SerializedName("x")
+    @SerializedName("y")
     private int y;
 
     public StonePut(int x, int y) {
