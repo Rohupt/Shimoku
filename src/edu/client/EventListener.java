@@ -55,7 +55,7 @@ public class EventListener  {
                     break;
                 case "cr":
                     //Confirm rule changes
-                    controller.handleRuleConfirmed(gson.fromJson(p, ConfirmRule.class));
+                    controller.handleRuleConfirmed(gson.fromJson(p, ConfirmRules.class));
                     break;
                 case "gf":
                     //Guest found
@@ -83,15 +83,11 @@ public class EventListener  {
                     break;
                 case "ol":
                     //Opponent left
-                    controller.handleOpponentLeft(gson.fromJson(p, OpponentLeft.class));
+                    controller.handleOpponentLeft();
                     break;
                 case "od":
-                    //Offer draw - the receiving end
-                    controller.handleDrawOffer(gson.fromJson(p, OfferDraw.class));
-                    break;
-                case "dr":
-                    //Draw response - the receiving end
-                    controller.handleDrawResponse(gson.fromJson(p, DrawResponse.class));
+                    //Offer draw
+                    controller.handleDrawOffer();
                     break;
             }
         });

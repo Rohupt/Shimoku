@@ -22,13 +22,17 @@ import javafx.scene.control.Alert.AlertType;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
@@ -106,7 +110,6 @@ public class MainGUIController implements Initializable {
     //</editor-fold>
     
     private EventListener listener;
-    private boolean inGame;
     private byte position; // 1 is host, 2 is guest, 0 is not set
     private boolean isBlack;
     private boolean drawOfferSent;
@@ -117,7 +120,6 @@ public class MainGUIController implements Initializable {
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        setInGame(false);
         setPosition((byte) 0, true);
         listener = ClientMain.getClient().getListener();
         listener.setController(this);
@@ -149,40 +151,43 @@ public class MainGUIController implements Initializable {
         leaveBtn.setOnAction(e -> leaveRoom());
     }
     
+    private void fieldChanged() {
+        createBtn.setDisable(nameField.getText().isBlank());
+        joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
+    }
+    
+    private void copyCode() {
+        final ClipboardContent content = new ClipboardContent();
+        content.put(DataFormat.PLAIN_TEXT, codeLabel.getText());
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+    
     private void setPosition(byte p, boolean clearBoard) {
         position = p;
-        if (p == 0) {
-            codeLabel.setText("");
-            hostNameLabel.setText("");
-            guestNameLabel.setText("");
-            turnLabel.setText("");
-            hostGameTimeLabel.setText("");
-            hostMoveTimeLabel.setText("");
-            guestGameTimeLabel.setText("");
-            guestMoveTimeLabel.setText("");
-        } else if (p == 1) {
-            guestNameLabel.setText("");
-            ClientMain.getRoom().setGuest(null);
-            startBtn.setDisable(ClientMain.getRoom().getGuest() != null);
-        } else
-            startBtn.setDisable(true);
-        if (clearBoard)
-            parent.setCenter(null);
+        switch (p) {
+            case 0:
+                resetGame();
+                codeLabel.setText("");
+                hostNameLabel.setText("");
+                guestNameLabel.setText("");
+                break;
+            case 1:
+                guestNameLabel.setText("");
+                ClientMain.getRoom().setGuest(null);
+                startBtn.setDisable(ClientMain.getRoom().getGuest() != null);
+                break;
+            case 2:
+                startBtn.setDisable(true);
+                break;
+        }
         gamePane.setDisable(p != 0);
         gameBtnPane.setDisable(p == 0);
         settingsPane.setDisable(p != 1);
-    }
-    
-    private Alert alert(AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setContentText(content);
-        alert.setHeaderText(null);
-        return alert;
+        if (clearBoard)
+            parent.setCenter(null);
     }
 
     private void setInGame(boolean inGame) {
-        this.inGame = inGame;
         startBtn.setDisable(inGame);
         drawBtn.setDisable(!inGame);
         surrenderBtn.setDisable(!inGame);
@@ -194,19 +199,16 @@ public class MainGUIController implements Initializable {
         ClientMain.getClient().sendObject(o);
     }
     
+    private Alert alert(AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setContentText(content);
+        alert.setHeaderText(null);
+        return alert;
+    }
+    
     private GameSettings getSettings() {
         return ClientMain.getRoom().getSettings();
-    }
-    
-    private void fieldChanged() {
-        createBtn.setDisable(nameField.getText().isBlank());
-        joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
-    }
-    
-    private void copyCode() {
-        final ClipboardContent content = new ClipboardContent();
-        content.put(DataFormat.PLAIN_TEXT, codeLabel.getText());
-        Clipboard.getSystemClipboard().setContent(content);
     }
     
     private void createGame() {
@@ -227,7 +229,6 @@ public class MainGUIController implements Initializable {
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES) {
-            exitGame();
             notifBoard.appendText("You left the room.\n");
             setPosition((byte) 0, true);
             ClientMain.setRoom(null);
@@ -235,13 +236,15 @@ public class MainGUIController implements Initializable {
         }
     }
     
-    private void exitGame() {
+    private void resetGame() {
         setInGame(false);
         drawOfferSent = false;
         hostGameTimeLabel.setText("");
         hostMoveTimeLabel.setText("");
         guestGameTimeLabel.setText("");
         guestMoveTimeLabel.setText("");
+        turnLabel.setText("");
+        turnLabel.setBackground(new Background(new BackgroundFill(Color.GRAY, CornerRadii.EMPTY, Insets.EMPTY)));
         drawBtn.setText("Offer Draw");
         drawBtn.setOnAction(null);
     }
@@ -292,8 +295,9 @@ public class MainGUIController implements Initializable {
     private void requestMove() {
         int player = isBlack ? 1 : 2;
         board.enableStonePicker(player);
-        turnLabel.setText(String.format("%s\n(%s)", position == 1 ? "Host" : "Guest", isBlack ? "Black" : "White"));
-        turnLabel.setTextFill(isBlack ? Color.BLACK : Color.WHITE);
+        turnLabel.setText(String.format("%s", position == 1 ? "\u25c0" : "\u25b6"));
+        turnLabel.setTextFill(isBlack ? Color.WHITE : Color.BLACK);
+        turnLabel.setBackground(new Background(new BackgroundFill(isBlack ? Color.BLACK : Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
         board.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
@@ -305,8 +309,9 @@ public class MainGUIController implements Initializable {
                 //TODO: Stop the clock
                 board.disableStonePicker();
                 board.removeEventHandler(MouseEvent.MOUSE_CLICKED, this);
-                turnLabel.setText(String.format(" %s (%s)", position == 1 ? "Guest" : "Host", isBlack ? "White" : "Black"));
-                turnLabel.setTextFill(isBlack ? Color.WHITE : Color.BLACK);
+                turnLabel.setText(String.format("%s", position == 1 ? "\u25b6" : "\u25c0"));
+                turnLabel.setTextFill(isBlack ? Color.BLACK : Color.WHITE);
+                turnLabel.setBackground(new Background(new BackgroundFill(isBlack ? Color.WHITE : Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
                 if ("Agree to Offer".equals(drawBtn.getText())) {
                     drawBtn.setText("Offer Draw");
                     drawBtn.setOnAction(e -> offerDraw());
@@ -334,7 +339,7 @@ public class MainGUIController implements Initializable {
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES)
-            sendObject(new DrawResponse(true));
+            sendObject(new DrawAgree());
     }
     
     private void surrender() {
@@ -368,16 +373,15 @@ public class MainGUIController implements Initializable {
         notifBoard.appendText("WARNING: Game rules changed.\n");
     }
 
-    public void handleRuleConfirmed(ConfirmRule cfPacket) {
+    public void handleRuleConfirmed(ConfirmRules cfPacket) {
         if (cfPacket.isSuccessful()) {
-            var settings = getSettings();
-            settings.setMoveTimeMillis(TimeUnit.MILLISECONDS
+            getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS
                 .convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
-            settings.setMoveTimingEnabled(moveTimingCheckBox.isSelected());
-            settings.setGameTimeMillis(TimeUnit.MILLISECONDS.convert
+            getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
+            getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert
                 (gameTimeComboBox.getValue(), TimeUnit.MINUTES));
-            settings.setGameTimingEnabled(gameTimingCheckBox.isSelected());
-            settings.setSize(sizeComboBox.getValue());
+            getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
+            getSettings().setSize(sizeComboBox.getValue());
             settingsPane.setDisable(false);
             notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
         } else {
@@ -418,9 +422,9 @@ public class MainGUIController implements Initializable {
             notifBoard.appendText("NOT FOUND: code invalid, room not found.\n");
     }
 
-    public void handleOpponentLeft(OpponentLeft olPacket) {
+    public void handleOpponentLeft() {
         notifBoard.appendText("Opponent has left.\n");
-        exitGame();
+        resetGame();
         setPosition((byte) 1, true);
     }
 
@@ -433,6 +437,11 @@ public class MainGUIController implements Initializable {
         notifBoard.appendText(String.format("GAME STARTED: %s will move first.\n", isBlack ? "you" : "opponent"));
         if (isBlack)
             requestMove();
+        else {
+            turnLabel.setText(String.format("%s", position == 1 ? "\u25b6" : "\u25c0"));
+            turnLabel.setTextFill(Color.WHITE);
+            turnLabel.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
+        }
     }
 
     public void handleOpponentMove(StonePut spPacket) {
@@ -464,17 +473,14 @@ public class MainGUIController implements Initializable {
             case BY_WINNING_MOVE: reason = result.equals("YOU WON!") ? "Oh, that was merciless." : "Next time mind your back a little, won't you?"; break;
         }
         notifBoard.appendText(String.format("%s %s\n", result, reason));
-        exitGame();
+        resetGame();
         setPosition(position, gePacket.getReason() == GameEnd.ReasonType.BY_OPPONENT_LEFT);
     }
 
-    public void handleDrawOffer(OfferDraw odPacket) {
+    public void handleDrawOffer() {
         notifBoard.appendText("DRAW OFFERED: Your opponent offered a draw. You can agree to the offer by clicking \"Agree to Offer\", or reject it by continuing making moves.\n");
         drawBtn.setText("Agree to Offer");
         drawBtn.setOnAction(e -> drawAgree());
     }
-
-    public void handleDrawResponse(DrawResponse drPacket) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+    
 }

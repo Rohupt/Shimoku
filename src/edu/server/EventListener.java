@@ -42,16 +42,16 @@ public class EventListener {
                 break;
             case "sr":
                 //Start Request
-                handleStartRq(gson.fromJson(p,StartRequest.class),con);
+                handleStartRequest(con);
                 break;
             case "sp":
                 //Stone Put
-                handleStonePutRq(gson.fromJson(p,StonePut.class),con);
+                handleStonePut(gson.fromJson(p,StonePut.class),con);
                 break;
             case "su":
                 //Surrender
                 // If a player surrender -> GameEnd
-                handleSurPacket(gson.fromJson(p,Surrender.class),con);
+                handleSurPacket(con);
                 break;
             case "lg":
                 //Leave Game
@@ -61,9 +61,9 @@ public class EventListener {
                 //Offer Draw
                 handleDrawOffer(con);
                 break;
-            case "dr":
-                //Draw Response
-                handleDrawRs(gson.fromJson(p,DrawResponse.class),con);
+            case "da":
+                //Draw Agree
+                handleDrawAgree(con);
                 break;
             default:
                 break;
@@ -89,39 +89,37 @@ public class EventListener {
         con.sendObject(gameID);
     }
 
-    public void handleRuleSet(RuleSet rulePacket, Connection con){
+    public void handleRuleSet(RuleSet rsPacket, Connection con){
         //Only host client can set rule
         Room room = con.getRoom();
         GameSettings temp = new GameSettings(room.getSettings());
         boolean successed = false;
         try {
-            room.getSettings().setSize(rulePacket.getSize());
+            room.getSettings().setSize(rsPacket.getSize());
             
-            if (rulePacket.getGameTime() == -1) {
+            if (rsPacket.getGameTime() == -1) {
                 room.getSettings().setGameTimingEnabled(false);
             } else {
                 room.getSettings().setGameTimingEnabled(true);
-                room.getSettings().setGameTimeMillis(rulePacket.getGameTime());
+                room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
             }
             
-            if (rulePacket.getMoveTime() == -1) {
+            if (rsPacket.getMoveTime() == -1) {
                 room.getSettings().setMoveTimingEnabled(false);
             } else {
                 room.getSettings().setMoveTimingEnabled(true);
-                room.getSettings().setMoveTimeMillis(rulePacket.getMoveTime());
+                room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
             }
             successed = true;
         } catch (Exception e) {
             System.out.println("Rules changes failed");
             room.setSettings(temp);
         }
-        
-        ConfirmRule crPacket = new ConfirmRule(successed);
-        con.sendObject(crPacket);
+        con.sendObject(new ConfirmRules(successed));
 
         if (room.getGuest() != null && successed) {
             // end RuleSet packet to guest client
-            room.getGuest().getConnection().sendObject(rulePacket);
+            room.getGuest().getConnection().sendObject(rsPacket);
         }
     }
 
@@ -149,8 +147,7 @@ public class EventListener {
         con.sendObject(jfPacket);
     }
 
-
-    public void handleStartRq(StartRequest srPacket, Connection con){
+    public void handleStartRequest(Connection con){
         Room room = con.getRoom(); // Get room from connection
         room.newGame(room.getSettings());
         if (room.getGame().isHostMoveFirst()) {
@@ -163,12 +160,12 @@ public class EventListener {
         room.getGame().start();
     }
 
-    public void handleStonePutRq(StonePut spPacket,Connection con){
+    public void handleStonePut(StonePut spPacket,Connection con){
         Game game = con.getRoom().getGame();
         game.setUserMove(new Move(spPacket.getX(),spPacket.getY()));
     }
 
-    public void handleSurPacket(Surrender surPacket,Connection con){
+    public void handleSurPacket(Connection con){
         // Send EndGame Packet
         Room room = con.getRoom();
         room.getGame().stop();
@@ -182,11 +179,11 @@ public class EventListener {
         room.getGuest().getConnection().sendObject(gameEnd);
     }
 
-    public void handleDrawRq(Connection con){
+    public void handleDrawOffer(Connection con){
         con.getRoom().getSortedPlayers(con)[1].getConnection().sendObject(new OfferDraw());
     }
 
-    public void handleDrawRs(DrawResponse drawRs, Connection con){
+    public void handleDrawAgree(Connection con){
         Room room = con.getRoom();
         room.getGame().stop();
         room.removeGame();
@@ -223,7 +220,7 @@ public class EventListener {
         room.setGuest(null);
     }
 
-    public Room findRoom(String roomID){
+    private Room findRoom(String roomID){
         for (Room x : RoomList.getRoomList()){
             if(x.getRoomID() == null ? roomID == null : x.getRoomID().equals(roomID))
                 return x;
