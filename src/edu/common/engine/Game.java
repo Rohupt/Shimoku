@@ -14,6 +14,7 @@ import java.util.concurrent.*;
 public class Game {
 
 //    private final List<GameListener> listeners;
+    private final boolean hostMoveFirst;
     private final GameSettings settings;
     private final ExecutorService executor;
     private Player[] players;
@@ -23,28 +24,20 @@ public class Game {
     private Thread gameThread;
     private TimerTask timeUpdateSender;
     private GameState state;
+    private final Room room;
 
-    /**
-     * Create a new game instance.
-     */
-    public Game() {
-        this(new GameSettings());
-    }
-    
-    public Game(GameSettings gameSettings) {
+    public Game(GameSettings gameSettings, Room room) {
         this.settings = gameSettings;
+        this.room = room;
         this.times = new long[2];
         this.players = new Player[2];
         this.executor = Executors.newSingleThreadExecutor();
         this.gameThread = new Thread(getRunnable());
         this.timer = new Timer();
         this.state = new GameState(settings.getSize());
+        this.hostMoveFirst = ThreadLocalRandom.current().nextBoolean();
     }
 
-    /**
-     * Start the game. Reads the game settings and launches a new game thread.
-     * Has no effect if the game thread is already running.
-     */
     public void start() {
         if(!this.gameThread.isAlive()) {
             this.state = new GameState(settings.getSize());
@@ -55,11 +48,6 @@ public class Game {
         }
     }
 
-    /**
-     * Stop the game. Safely interrupts the thread and cancels any pending
-     * moves and calls join() to wait for the thread to resolve. Has no
-     * effect if the game thread is not running.
-     */
     public void stop() {
         if(this.gameThread.isAlive()) {
             this.gameThread.interrupt();
@@ -71,42 +59,26 @@ public class Game {
             if(!futureMove.isDone()) {
                 futureMove.cancel(true);
             }
-            timeUpdateSender.cancel();
+            //Turn this on when setting clock
+            //timeUpdateSender.cancel();
         }
     }
 
-    /**
-     * Get the game settings.
-     * @retun GameSettings instance
-     */
     public GameSettings getSettings() {
         return settings;
     }
 
-    /**
-     * Register a listener with this game instance.
-     * @param listener GameListener to register
-     */
 //    public void addListener(GameListener listener) {
 //        this.listeners.add(listener);
 //    }
 
-    /**
-     * Request a move from a player.
-     * @return Players move
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws TimeoutException
-     */
     private Move requestMove(int playerIndex, Move lastMove) throws
             InterruptedException, ExecutionException, TimeoutException {
         Player player = players[playerIndex - 1];
         long timeout = calculateTimeoutMillis(playerIndex);
         this.futureMove = executor.submit(() -> player.getMove(state));
-
-//      Send an object to Client
-        StonePut movePacket = new StonePut(lastMove.row,lastMove.col);
-        player.getConnection().sendObject(movePacket);
+        if (lastMove != null)
+            player.getConnection().sendObject(new StonePut(lastMove.row,lastMove.col));
 
         if (timeout > 0) {
             try {
@@ -119,14 +91,8 @@ public class Game {
             return futureMove.get();
         }
 
-
     }
 
-    /**
-     * Called by the GUI to set a user's move for the game.
-     * @param move Move from the user
-     * @return True if the move was accepted
-     */
     public boolean setUserMove(Move move) {
         Player currentPlayer = players[state.getCurrentIndex() - 1];
         if(!state.getMoves().contains(move)) {
@@ -139,12 +105,6 @@ public class Game {
         return false;
     }
 
-    /**
-     * Calculate the timeout value for a player or return 0 if timing is not
-     * enabled for this game.
-     * @param player Player index
-     * @return Timeout value in milliseconds
-     */
     private long calculateTimeoutMillis(int player) {
         if(settings.moveTimingEnabled() && settings.gameTimingEnabled()) {
             // Both move timing and game timing are enabled
@@ -161,13 +121,10 @@ public class Game {
         }
     }
 
-    /**
-     * Get the runnable game loop for this game.
-     */
     private Runnable getRunnable() {
         return () -> {
             if(state.getMoves().isEmpty()) {
-                GameStart startPacket = new GameStart();
+                GameStart startPacket = new GameStart(hostMoveFirst);
                 this.players[0].getConnection().sendObject(startPacket);
                 this.players[1].getConnection().sendObject(startPacket);
             }
@@ -180,22 +137,19 @@ public class Game {
 
                     //Request move from current player
                     Move move;
-                    if(state.getMoves().isEmpty()){
-                        Move initMove = new Move(-1,-1);
-                        move = requestMove(state.getCurrentIndex(),initMove);
-                    }else{
-                        move = requestMove(state.getCurrentIndex(),state.getLastMove());
-                    }
-
+                    if(state.getMoves().isEmpty())
+                        move = requestMove(state.getCurrentIndex(), null);
+                    else
+                        move = requestMove(state.getCurrentIndex(), state.getLastMove());
+                    
                     long elapsedTime = System.currentTimeMillis() - startTime;
                     //decrease time game of current player
                     times[state.getCurrentIndex() - 1] -= elapsedTime;
-
                     state.makeMove(move);
 
                 } catch (InterruptedException ex) {
 //                    stopTimeUpdates();
-                    break;
+                    return;
                 } catch (ExecutionException ex) {
 //                    stopTimeUpdates();
                     ex.printStackTrace();
@@ -208,34 +162,29 @@ public class Game {
                     break;
                 }
             }
-
+            if (players[0].getConnection() == null || players[1].getConnection() == null)
+                return;
+            players[state.getCurrentIndex() - 1].getConnection().sendObject(new StonePut(state.getLastMove().row, state.getLastMove().col));
             // Game end and send message to 2 client
             GameEnd gameEnd = new GameEnd();
-            if(state.terminal() == 1) {
-                gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
+            if (state.terminal() == 1 || state.terminal() == 2) {
+                gameEnd.setEndingType((hostMoveFirst ? state.terminal() == 1 : state.terminal() == 2)
+                        ? GameEnd.EndingType.HOST_WON : GameEnd.EndingType.GUEST_WON);
                 gameEnd.setReason(GameEnd.ReasonType.BY_WINNING_MOVE);
-            }else if(state.terminal() == 2){
-                gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
-                gameEnd.setReason(GameEnd.ReasonType.BY_WINNING_MOVE);
-            }else if(state.terminal() == 3){
+            }else if (state.terminal() == 3){
                 gameEnd.setEndingType(GameEnd.EndingType.DRAW);
                 gameEnd.setReason(GameEnd.ReasonType.BY_BOARD_FULL);
-            }else if(timeout){
-                if(state.getCurrentIndex() == 1)
-                    gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
-                else
-                    gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
+            }else if (timeout) {
+                gameEnd.setEndingType((hostMoveFirst ? state.getCurrentIndex() == 1 : state.getCurrentIndex() == 2)
+                        ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON);
                 gameEnd.setReason(GameEnd.ReasonType.BY_TIMEOUT);
             }
             players[0].getConnection().sendObject(gameEnd);
             players[1].getConnection().sendObject(gameEnd);
+            room.removeGame();
         };
     }
 
-    /**
-     * Start sending time events to listeners.
-     * @param playerIndex Player index to send times for
-     */
     private void sendTimeUpdates(int playerIndex) {
         this.timeUpdateSender = new TimerTask() {
             long startTime = System.currentTimeMillis();
@@ -261,9 +210,6 @@ public class Game {
         timer.scheduleAtFixedRate(timeUpdateSender, 0, 100);
     }
 
-    /**
-     * Stop sending time updates.
-     */
     private void stopTimeUpdates() {
         timeUpdateSender.cancel();
     }
@@ -302,5 +248,9 @@ public class Game {
 
     public boolean checkAlive(){
         return this.gameThread.isAlive();
+    }
+
+    public boolean isHostMoveFirst() {
+        return hostMoveFirst;
     }
 }

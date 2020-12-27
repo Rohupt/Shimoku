@@ -7,6 +7,7 @@ import edu.common.packet.client.*;
 import edu.common.packet.server.*;
 import edu.common.engine.*;
 import edu.server.room.RoomList;
+import java.net.InetSocketAddress;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -21,8 +22,9 @@ public class EventListener {
         } catch (ParseException e) {
             e.printStackTrace();
         }
+        InetSocketAddress remoteAddress = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
         String packetID = (String) packetJson.get("id");
-        System.out.printf("Received a packet: %s\n\t%s\n", con.ipToHex(), p);
+        System.out.printf("Received a packet: %s:%s\n\t%s\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), p);
 
         Gson gson = new Gson();
         switch (packetID){
@@ -68,10 +70,10 @@ public class EventListener {
         }
     }
 
-    public void handleCreateGame(CreateGame crtPacket,Connection con){
+    public void handleCreateGame(CreateGame cgPacket,Connection con){
         Room room = new Room();
         room.setSettings(new GameSettings());
-        room.setHost(new Player(crtPacket.getUsername(),con));
+        room.setHost(new Player(cgPacket.getUsername(),con));
         room.getHost().getConnection().setRoom(room);
         con.setRoom(room);
 
@@ -123,108 +125,75 @@ public class EventListener {
         }
     }
 
-    public void handleJoinGame(JoinGame joinPacket, Connection con){
-        Room room = findRoom(joinPacket.getRoomID());
-        if(room != null) {
-            if(room.getGuest() == null){
+    public void handleJoinGame(JoinGame jgPacket, Connection con){
+        Room room = findRoom(jgPacket.getRoomID());
+        if(room != null)
+            if (room.getGuest() == null) {
                 // Add guest player to room, add connection room -> connection
-                room.setGuest(new Player(joinPacket.getUsername(),con));
+                room.setGuest(new Player(jgPacket.getUsername(),con));
                 room.getGuest().getConnection().setRoom(room);
                 con.setRoom(room);
 
                 // Send guest found object to host
-                GuestFound guestFound = new GuestFound(joinPacket.getUsername());
+                GuestFound guestFound = new GuestFound(jgPacket.getUsername());
                 room.getHost().getConnection().sendObject(guestFound);
 
                 // Send room info to guest
                 RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
                                     room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
                                     room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);
-                GameInfo info = new GameInfo(ruleSet,room.getHost().getUsername());
-                con.sendObject(info);
+                con.sendObject(new GameInfo(ruleSet,room.getHost().getUsername()));
                 return;
-            }else{
-                System.out.println("Room full, cannot join");
             }
-        }else{
-            System.out.println("Room not found, Join Request refused");
-        }
         JoinFailed jfPacket = new JoinFailed(room != null);
         con.sendObject(jfPacket);
     }
 
-    public void handleStartRq(StartRequest startRq, Connection con){
+
+    public void handleStartRq(StartRequest srPacket, Connection con){
         Room room = con.getRoom(); // Get room from connection
-        if(room != null){
-            if(room.getGuest() != null){
-                // Create new state and start room (room extends room)
-                room.newGame(room.getSettings());
-                room.getGame().start();
-            }else{
-                // Cho nay xu ly ben front end
-                System.out.println("Guest player not found");
-            }
-            // Send GameStart packet to 2 client
-        }else{
-            System.out.println("Room not found, Start Request refused");
-            //Send back to client some code
+        room.newGame(room.getSettings());
+        if (room.getGame().isHostMoveFirst()) {
+            room.getGame().setPlayer1(room.getHost());
+            room.getGame().setPlayer2(room.getGuest());
+        } else {
+            room.getGame().setPlayer1(room.getGuest());
+            room.getGame().setPlayer2(room.getHost());
         }
+        room.getGame().start();
     }
 
-    public void handleStonePutRq(StonePut stone,Connection con){
-        Move newMove = new Move(stone.getX(),stone.getY());
+    public void handleStonePutRq(StonePut spPacket,Connection con){
         Game game = con.getRoom().getGame();
-        if(game.setUserMove(newMove)){
-            //Do something
-        }else{
-            //Do something
-        }
+        game.setUserMove(new Move(spPacket.getX(),spPacket.getY()));
     }
 
     public void handleSurPacket(Surrender surPacket,Connection con){
         // Send EndGame Packet
         Room room = con.getRoom();
+        room.getGame().stop();
+        room.removeGame();
 
-        Player[] players = room.getSortedPlayers(con);
-        Player surPlayer = players[0];
-        Player winPlayer = players[1];
+        GameEnd gameEnd = new GameEnd(room.getSortedPlayers(con)[1] == room.getHost() ?
+                GameEnd.EndingType.HOST_WON : GameEnd.EndingType.GUEST_WON,
+                GameEnd.ReasonType.BY_OPPONENT_SURRENDER);
 
-        GameEnd gameEnd = new GameEnd();
-        gameEnd.setReason(GameEnd.ReasonType.BY_OPPONENT_SURRENDER);
-
-        if(winPlayer == room.getHost()){
-            gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
-        }else if(winPlayer == room.getGuest()){
-            gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
-        }
-
-        winPlayer.getConnection().sendObject(gameEnd);
-        surPlayer.getConnection().sendObject(gameEnd);
+        room.getHost().getConnection().sendObject(gameEnd);
+        room.getGuest().getConnection().sendObject(gameEnd);
     }
 
-    public void handleDrawOffer(Connection con){
-        Room room = con.getRoom();
-
-        Player[] players = room.getSortedPlayers(con);
-        Player drawPlayer = players[0];
-        Player recvDrawPlayer = players[1];
-
-        recvDrawPlayer.getConnection().sendObject(drawPlayer);
+    public void handleDrawRq(Connection con){
+        con.getRoom().getSortedPlayers(con)[1].getConnection().sendObject(new OfferDraw());
     }
 
-    public  void handleDrawRs(DrawResponse drawRs,Connection con){
+    public void handleDrawRs(DrawResponse drawRs, Connection con){
         Room room = con.getRoom();
-
-        if(drawRs.isAgree()){
-            GameEnd gameEnd = new GameEnd(GameEnd.EndingType.DRAW, GameEnd.ReasonType.BY_AGREEMENT);
-
-            room.getHost().getConnection().sendObject(gameEnd);
-            room.getGuest().getConnection().sendObject(gameEnd);
-        }else{
-            // Forward drawRs to other player to player resume Move
-            Player[] players = room.getSortedPlayers(con);
-            players[1].getConnection().sendObject(drawRs);
-        }
+        room.getGame().stop();
+        room.removeGame();
+        GameEnd gameEnd = new GameEnd(GameEnd.EndingType.DRAW, GameEnd.ReasonType.BY_AGREEMENT);
+        room.getHost().getConnection().sendObject(gameEnd);
+        room.getGuest().getConnection().sendObject(gameEnd);
+        
     }
 
     public void handleLeaveGame(Connection con){
@@ -252,44 +221,6 @@ public class EventListener {
             room.getHost().getConnection().sendObject(new GameID(room.getRoomID(), ruleSet));
         }
         room.setGuest(null);
-
-        /*if (room.getGame() != null) {
-            if (room.getGame().checkAlive()) {
-                Player winPlayer = players[1];
-
-                GameEnd gameEnd = new GameEnd();
-                gameEnd.setReason(GameEnd.ReasonType.BY_OPPONENT_LEFT);
-
-                if(winPlayer == room.getHost()){
-                    gameEnd.setEndingType(GameEnd.EndingType.HOST_WON);
-                }else if (winPlayer == room.getGuest()){
-                    gameEnd.setEndingType(GameEnd.EndingType.GUEST_WON);
-                }
-
-                // In this case only need to send to winner player
-                winPlayer.getConnection().sendObject(gameEnd);
-            }
-            
-
-            // If remain player is not host player set it host
-            if(room.checkHost(con)){
-                room.setHost(players[1]);
-            }
-            room.setGuest(null);
-        } else {
-            if(players[1] == null){
-                //No players in this room, remove this room
-                RoomList.roomList.remove(room);
-                return;
-            }else if(room.checkHost(con)){
-                //Set remain player as host player
-                room.setHost(players[1]);
-            }
-            room.setGuest(null);
-
-            //Send ClientLeft object to remain player
-            players[1].getConnection().sendObject(new OpponentLeft());
-        }*/
     }
 
     public Room findRoom(String roomID){
@@ -300,43 +231,4 @@ public class EventListener {
         return null;
     }
 
-    public void received(Object p, Connection con){
-        if(p instanceof CreateGame){
-            CreateGame crtPacket = (CreateGame)p;
-            handleCreateGame(crtPacket,con);
-        }else if(p instanceof RuleSet){
-            RuleSet rulePacket = (RuleSet) p;
-            handleRuleSet(rulePacket,con);
-        }else if(p instanceof JoinGame){
-            JoinGame joinPacket = (JoinGame)p;
-            handleJoinGame(joinPacket,con);
-        }else if(p instanceof StartRequest){
-            StartRequest startRq = (StartRequest)p;
-            handleStartRq(startRq,con);
-        }else if(p instanceof StonePut){
-            StonePut stone = (StonePut)p;
-            handleStonePutRq(stone,con);
-        }else if(p instanceof Surrender){
-            // If a player surrender -> GameEnd
-            Surrender surPacket = (Surrender)p;
-            handleSurPacket(surPacket,con);
-        }else if(p instanceof LeaveGame){
-            // If opponent left the winner is the remainder
-            // Send GameEnd to only winner
-            handleLeaveGame(con);
-        }else if(p instanceof OfferDraw){
-            // A player send draw offer request to another player
-            OfferDraw drawRq = (OfferDraw)p;
-            handleDrawOffer(con);
-        }else if(p instanceof DrawResponse){
-            // A player received draw offer request and response
-            DrawResponse drawRs = (DrawResponse)p;
-            handleDrawRs(drawRs,con);
-        }
-        // GameEnd
-        // Surrender
-        // OpponentLeft
-        // OfferDraw
-        // DrawResponse
-    }
 }

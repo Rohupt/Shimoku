@@ -4,19 +4,19 @@ import com.google.gson.annotations.SerializedName;
 import edu.common.packet.Packet;
 
 public class ConfirmRule extends Packet {
-    @SerializedName("status")
-    private boolean status;
+    @SerializedName("succeeded")
+    private boolean successful;
 
     public ConfirmRule(boolean status) {
         this.setId("cr");
-        this.status = status;
+        this.successful = status;
     }
 
-    public boolean isStatus() {
-        return status;
+    public boolean isSuccessful() {
+        return successful;
     }
 
-    public void setStatus(boolean status) {
-        this.status = status;
+    public void setSuccessful(boolean successful) {
+        this.successful = successful;
     }
 }

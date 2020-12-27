@@ -15,7 +15,7 @@ public class GameSettings {
      * Create a new GameSettings instance with default values.
      */
     public GameSettings() {
-        this.gameTimingEnabled = true;
+        this.gameTimingEnabled = false;
         this.moveTimingEnabled = false;
         this.gameTimeMillis = 1200000;
         this.moveTimeMillis = 5000;

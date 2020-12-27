@@ -51,7 +51,7 @@ public class EventListener  {
                     break;
                 case "rs":
                     //Rule set
-                    controller.handleRuleChanges(gson.fromJson(p, RuleSet.class), true);
+                    controller.handleRuleChanges(gson.fromJson(p, RuleSet.class));
                     break;
                 case "cr":
                     //Confirm rule changes
