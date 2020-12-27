@@ -9,7 +9,7 @@ public class JoinFailed extends Packet {
     private boolean found;
 
     public JoinFailed(boolean found) {
-        this.setId("10");
+        this.setId("jf");
         this.found = found;
     }
 

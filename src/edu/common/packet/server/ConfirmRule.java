@@ -8,7 +8,7 @@ public class ConfirmRule extends Packet {
     private boolean successful;
 
     public ConfirmRule(boolean status) {
-        this.setId("03");
+        this.setId("cr");
         this.successful = status;
     }
 

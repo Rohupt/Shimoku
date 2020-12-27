@@ -28,51 +28,42 @@ public class EventListener {
 
         Gson gson = new Gson();
         switch (packetID){
-            case "00":
+            case "cg":
                 //Create Game
-                CreateGame crtPacket = gson.fromJson(p,CreateGame.class);
-                handleCreateGame(crtPacket,con);
+                handleCreateGame(gson.fromJson(p,CreateGame.class), con);
                 break;
-            case "02":
+            case "rs":
                 //RuleSet
-                RuleSet rulePacket = gson.fromJson(p,RuleSet.class);
-                handleRuleSet(rulePacket,con);
+                handleRuleSet(gson.fromJson(p,RuleSet.class),con);
                 break;
-            case "04":
+            case "jg":
                 //Join Game
-                JoinGame joinPacket = gson.fromJson(p,JoinGame.class);
-                handleJoinGame(joinPacket,con);
+                handleJoinGame(gson.fromJson(p,JoinGame.class),con);
                 break;
-            case "07":
+            case "sr":
                 //Start Request
-                StartRequest startRq = gson.fromJson(p,StartRequest.class);
-                handleStartRq(startRq,con);
+                handleStartRq(gson.fromJson(p,StartRequest.class),con);
                 break;
-            case "09":
+            case "sp":
                 //Stone Put
-                StonePut stone = gson.fromJson(p,StonePut.class);
-                handleStonePutRq(stone,con);
+                handleStonePutRq(gson.fromJson(p,StonePut.class),con);
                 break;
-            case "0a":
+            case "su":
                 //Surrender
                 // If a player surrender -> GameEnd
-                Surrender surPacket = gson.fromJson(p,Surrender.class);
-                handleSurPacket(surPacket,con);
+                handleSurPacket(gson.fromJson(p,Surrender.class),con);
                 break;
-            case "0b":
+            case "lg":
                 //Leave Game
-                // If opponent left the winner is the remainder
-                // Send GameEnd to only winner
                 handleLeaveGame(con);
                 break;
-            case "0d":
+            case "od":
                 //Offer Draw
-                handleDrawRq(con);
+                handleDrawOffer(con);
                 break;
-            case "0e":
+            case "dr":
                 //Draw Response
-                DrawResponse drawRs = gson.fromJson(p,DrawResponse.class);
-                handleDrawRs(drawRs,con);
+                handleDrawRs(gson.fromJson(p,DrawResponse.class),con);
                 break;
             default:
                 break;
@@ -158,6 +149,7 @@ public class EventListener {
         con.sendObject(jfPacket);
     }
 
+
     public void handleStartRq(StartRequest srPacket, Connection con){
         Room room = con.getRoom(); // Get room from connection
         room.newGame(room.getSettings());
@@ -238,4 +230,5 @@ public class EventListener {
         }
         return null;
     }
+
 }

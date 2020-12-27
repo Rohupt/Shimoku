@@ -45,64 +45,53 @@ public class EventListener  {
         Gson gson = new Gson();
         Platform.runLater(() -> {
             switch (packetID) {
-                case "01":
+                case "id":
                     //Game ID
-                    GameID idPacket = gson.fromJson(p, GameID.class);
-                    controller.handleIDPacket(idPacket);
+                    controller.handleIDPacket(gson.fromJson(p, GameID.class));
                     break;
-                case "02":
+                case "rs":
                     //Rule set
-                    RuleSet rsPacket = gson.fromJson(p, RuleSet.class);
-                    controller.handleRuleChanges(rsPacket);
+                    controller.handleRuleChanges(gson.fromJson(p, RuleSet.class));
                     break;
-                case "03":
+                case "cr":
                     //Confirm rule changes
-                    ConfirmRule cfPacket = gson.fromJson(p, ConfirmRule.class);
-                    controller.handleRuleConfirmed(cfPacket);
+                    controller.handleRuleConfirmed(gson.fromJson(p, ConfirmRule.class));
                     break;
-                case "05":
+                case "gf":
                     //Guest found
-                    GuestFound gfPacket = gson.fromJson(p, GuestFound.class);
-                    controller.handleGuestFound(gfPacket);
+                    controller.handleGuestFound(gson.fromJson(p, GuestFound.class));
                     break;
-                case "06":
-                    GameInfo giPacket = gson.fromJson(p, GameInfo.class);
-                    controller.handleGameInfo(giPacket);
+                case "gi":
+                    //Game info
+                    controller.handleGameInfo(gson.fromJson(p, GameInfo.class));
                     break;
-                case "08":
-                    //Game start
-                    GameStart gsPacket = gson.fromJson(p, GameStart.class);
-                    controller.handleGameStart(gsPacket);
-                    break;
-                case "09":
-                    //Opponent move
-                    StonePut spPacket = gson.fromJson(p, StonePut.class);
-                    controller.handleOpponentMove(spPacket);
-                    break;
-                case "0f":
-                    //Game end
-                    GameEnd gePacket = gson.fromJson(p, GameEnd.class);
-                    controller.handleGameEnd(gePacket);
-                    break;
-                case "0c":
-                    //Opponent left
-                    OpponentLeft olPacket = gson.fromJson(p, OpponentLeft.class);
-                    controller.handleOpponentLeft(olPacket);
-                    break;
-                case "0d":
-                    //Offer draw - the receiving end
-                    OfferDraw odPacket = gson.fromJson(p, OfferDraw.class);
-                    controller.handleDrawOffer(odPacket);
-                    break;
-                case "0e":
-                    //Draw response - the receiving end
-                    DrawResponse drPacket = gson.fromJson(p, DrawResponse.class);
-                    controller.handleDrawResponse(drPacket);
-                    break;
-                case "10":
+                case "jf":
                     //Join game request failed, room is full or not found
-                    JoinFailed jfPacket = gson.fromJson(p, JoinFailed.class);
-                    controller.handleJoinFailed(jfPacket);
+                    controller.handleJoinFailed(gson.fromJson(p, JoinFailed.class));
+                    break;
+                case "gs":
+                    //Game start
+                    controller.handleGameStart(gson.fromJson(p, GameStart.class));
+                    break;
+                case "sp":
+                    //Opponent move
+                    controller.handleOpponentMove(gson.fromJson(p, StonePut.class));
+                    break;
+                case "ge":
+                    //Game end
+                    controller.handleGameEnd(gson.fromJson(p, GameEnd.class));
+                    break;
+                case "ol":
+                    //Opponent left
+                    controller.handleOpponentLeft(gson.fromJson(p, OpponentLeft.class));
+                    break;
+                case "od":
+                    //Offer draw - the receiving end
+                    controller.handleDrawOffer(gson.fromJson(p, OfferDraw.class));
+                    break;
+                case "dr":
+                    //Draw response - the receiving end
+                    controller.handleDrawResponse(gson.fromJson(p, DrawResponse.class));
                     break;
             }
         });

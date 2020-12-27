@@ -8,7 +8,7 @@ public class CreateGame extends Packet {
     private String username;
 
     public CreateGame(String username) {
-        this.setId("00");
+        this.setId("cg");
         this.username = username;
     }
 
