@@ -34,6 +34,7 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -47,6 +48,12 @@ public class MainGUIController implements Initializable {
     //<editor-fold defaultstate="collapsed" desc="Element declarations">
     @FXML
     private BorderPane parent;
+    @FXML
+    private HBox topPane;
+    @FXML
+    private VBox rightPane;
+    @FXML
+    private BorderPane boardContainer;
     @FXML
     private GridPane hostPane;
     @FXML
@@ -137,11 +144,21 @@ public class MainGUIController implements Initializable {
     }
     
     private void addHandlers() {
-        nameField.textProperty().addListener((b, o, n) -> fieldChanged());
-        codeField.textProperty().addListener((b, o, n) -> fieldChanged());
-        codeLabel.textProperty().addListener((b, o, n) -> copyBtn.setDisable(codeLabel.getText().isBlank()));
-        gameTimingCheckBox.selectedProperty().addListener((b, o, n) -> gameTimingEnabled());
-        moveTimingCheckBox.selectedProperty().addListener((b, o, n) -> moveTimingEnabled());
+        nameField.textProperty().addListener((v, o, n) -> fieldChanged());
+        codeField.textProperty().addListener((v, o, n) -> fieldChanged());
+        codeLabel.textProperty().addListener((v, o, n) -> copyBtn.setDisable(codeLabel.getText().isBlank()));
+        gameTimingCheckBox.selectedProperty().addListener((v, o, n) -> gameTimingEnabled());
+        moveTimingCheckBox.selectedProperty().addListener((v, o, n) -> moveTimingEnabled());
+        parent.widthProperty().addListener((v, o, n) -> {
+            boardContainer.setMinWidth(n.intValue() - 200);
+            boardContainer.setMaxWidth(n.intValue() - 200);
+        });
+        parent.heightProperty().addListener((v, o, n) -> {
+            boardContainer.setMinHeight(n.intValue() - 70);
+            boardContainer.setMaxHeight(n.intValue() - 70);
+        });
+        boardContainer.widthProperty().addListener((v, o, n) -> resizeCanvas());
+        boardContainer.heightProperty().addListener((v, o, n) -> resizeCanvas());
         
         createBtn.setOnAction(e -> createGame());
         joinBtn.setOnAction(e -> joinGame());
@@ -156,6 +173,14 @@ public class MainGUIController implements Initializable {
     private void fieldChanged() {
         createBtn.setDisable(nameField.getText().isBlank());
         joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
+    }
+    
+    private void resizeCanvas() {
+        int canvasSize = (int) Math.min(boardContainer.getWidth(), boardContainer.getHeight()) - 12;
+        if (boardContainer.getCenter() instanceof BoardPane) {
+            ((BoardPane) boardContainer.getCenter()).setMinSize(canvasSize, canvasSize);
+            ((BoardPane) boardContainer.getCenter()).setMaxSize(canvasSize, canvasSize);
+        }
     }
     
     private void copyCode() {
@@ -174,9 +199,11 @@ public class MainGUIController implements Initializable {
                 guestNameLabel.setText("");
                 break;
             case 1:
-                guestNameLabel.setText("");
-                ClientMain.getRoom().setGuest(null);
-                startBtn.setDisable(ClientMain.getRoom().getGuest() != null);
+                if (clearBoard) {
+                    guestNameLabel.setText("");
+                    ClientMain.getRoom().setGuest(null);
+                }
+                startBtn.setDisable(ClientMain.getRoom().getGuest() == null);
                 break;
             case 2:
                 startBtn.setDisable(true);
@@ -186,7 +213,7 @@ public class MainGUIController implements Initializable {
         gameBtnPane.setDisable(p == 0);
         settingsPane.setDisable(p != 1);
         if (clearBoard)
-            parent.setCenter(null);
+            board = null;
     }
 
     private void setInGame(boolean inGame) {
@@ -206,7 +233,8 @@ public class MainGUIController implements Initializable {
         alert.setTitle(title);
         alert.setContentText(content);
         alert.setHeaderText(null);
-        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(this.getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons()
+                .add(new Image(this.getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
         return alert;
     }
     
@@ -306,18 +334,20 @@ public class MainGUIController implements Initializable {
             public void handle(MouseEvent event) {
                 int row = board.getClosestRow(event.getY());
                 int col = board.getClosestCol(event.getX());
-                board.addStone(player, row, col, false);
-                sendObject(new StonePut(row, col));
-                notifBoard.appendText(String.format("Your move: %s\n", BoardPane.convertMoveAlgebraic(row, col, getSettings().getSize())));
-                //TODO: Stop the clock
-                board.disableStonePicker();
-                board.removeEventHandler(MouseEvent.MOUSE_CLICKED, this);
-                turnLabel.setText(String.format("%s", position == 1 ? "\u25b6" : "\u25c0"));
-                turnLabel.setTextFill(isBlack ? Color.BLACK : Color.WHITE);
-                turnLabel.setBackground(new Background(new BackgroundFill(isBlack ? Color.WHITE : Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
-                if ("Agree to Offer".equals(drawBtn.getText())) {
-                    drawBtn.setText("Offer Draw");
-                    drawBtn.setOnAction(e -> offerDraw());
+                if (!board.hasStoneAt(row, col)) {
+                    board.addStone(player, row, col, false);
+                    sendObject(new StonePut(row, col));
+                    notifBoard.appendText(String.format("Your move: %s\n", BoardPane.convertMoveAlgebraic(row, col, getSettings().getSize())));
+                    //TODO: Stop the clock
+                    board.disableStonePicker();
+                    board.removeEventHandler(MouseEvent.MOUSE_CLICKED, this);
+                    turnLabel.setText(String.format("%s", position == 1 ? "\u25b6" : "\u25c0"));
+                    turnLabel.setTextFill(isBlack ? Color.BLACK : Color.WHITE);
+                    turnLabel.setBackground(new Background(new BackgroundFill(isBlack ? Color.WHITE : Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
+                    if ("Agree to Offer".equals(drawBtn.getText())) {
+                        drawBtn.setText("Offer Draw");
+                        drawBtn.setOnAction(e -> offerDraw());
+                    }
                 }
             }
         });
@@ -433,7 +463,8 @@ public class MainGUIController implements Initializable {
 
     public void handleGameStart(GameStart gsPacket) {
         board = new BoardPane(getSettings().getSize());
-        parent.setCenter(board);
+        boardContainer.setCenter(board);
+        resizeCanvas();
         drawBtn.setOnAction(e -> offerDraw());
         setInGame(true);
         isBlack = gsPacket.isHostMoveFirst() ? position == 1 : position == 2;

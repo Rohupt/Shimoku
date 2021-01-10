@@ -18,7 +18,7 @@
 
 <BorderPane fx:id="parent" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="640.0" minWidth="960.0" prefHeight="640.0" prefWidth="960.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="edu.client.gui.controllers.MainGUIController">
    <right>
-      <VBox maxWidth="200.0" prefHeight="440.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
+      <VBox fx:id="rightPane" maxWidth="200.0" prefHeight="440.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
          <padding>
             <Insets bottom="8.0" left="4.0" right="8.0" top="4.0" />
          </padding>
@@ -87,7 +87,7 @@
       </VBox>
    </right>
    <top>
-      <HBox maxHeight="70.0" prefHeight="70.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
+      <HBox fx:id="topPane" maxHeight="70.0" prefHeight="70.0" prefWidth="200.0" spacing="8.0" BorderPane.alignment="CENTER">
          <children>
             <GridPane fx:id="hostPane" hgap="2.0" maxWidth="252.0" minWidth="252.0" prefWidth="252.0" style="-fx-border-color: #000;" vgap="2.0">
               <columnConstraints>
@@ -237,4 +237,11 @@
          </padding>
       </HBox>
    </top>
+   <center>
+      <BorderPane fx:id="boardContainer" prefHeight="558.0" prefWidth="558.0" BorderPane.alignment="CENTER">
+         <padding>
+            <Insets bottom="8.0" left="8.0" right="4.0" top="4.0" />
+         </padding>
+      </BorderPane>
+   </center>
 </BorderPane>

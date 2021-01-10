@@ -34,6 +34,7 @@ public class BoardPane extends Pane {
 
     public BoardPane(int size) {
         this.size = size;
+        this.setStyle("-fx-background-color: #eeaf6f");
         this.board = new BoardStone[size][size];
         this.canvas = new Canvas();
         this.getChildren().add(canvas);
@@ -91,8 +92,7 @@ public class BoardPane extends Pane {
             double offset = i*cellSize;
             gc.setTextAlign(TextAlignment.CENTER);
             gc.setTextBaseline(VPos.CENTER);
-            gc.fillText(Integer.toString(rows + 1 - i), startX - distance,
-                    startY + offset);
+            gc.fillText(Integer.toString(rows + 1 - i), startX - distance, startY + offset);
         }
         gc.restore();
     }
@@ -106,8 +106,7 @@ public class BoardPane extends Pane {
             double offset = i*cellSize;
             gc.setTextAlign(TextAlignment.CENTER);
             gc.setTextBaseline(VPos.CENTER);
-            gc.fillText(Character.toString((char)('A' + i)), startX + offset,
-                    startY + cellSize*(rows) + distance);
+            gc.fillText(Character.toString((char)('A' + i)), startX + offset, startY + distance);
         }
         gc.restore();
     }
@@ -189,10 +188,7 @@ public class BoardPane extends Pane {
         // Fit the grid into the available space, which may be limited by
         // either the height or the width of the pane
         double smallestAxis = Math.min(getHeight(), getWidth());
-        this.cellSize = smallestAxis / (size - 1);
-
-        // Add some padding around the grid, so we can display numbers/letters
-        cellSize = (smallestAxis - (cellSize * 2)) / (size - 1);
+        this.cellSize = smallestAxis / (size + 1);
 
         // Center the grid by accounting for any extra space around it
         double remainingSpaceX = getWidth() - (cellSize * (size - 1));
@@ -206,8 +202,10 @@ public class BoardPane extends Pane {
         drawGrid(gc, paddingX, paddingY, size - 1, size - 1, cellSize);
 
         // Draw the numbers/letters
-        drawNumbers(gc, paddingX, paddingY, size - 1, size - 1, cellSize, 0.7 * cellSize);
-        drawLetters(gc, paddingX, paddingY, size - 1, size - 1, cellSize, 0.7 * cellSize);
+        drawNumbers(gc, paddingX, paddingY, size - 1, size - 1, cellSize, 0.6 * cellSize);
+        drawNumbers(gc, paddingX + cellSize * (size - 1), paddingY, size - 1, size - 1, cellSize, -0.6 * cellSize);
+        drawLetters(gc, paddingX, paddingY, size - 1, size - 1, cellSize, -0.6 * cellSize);
+        drawLetters(gc, paddingX, paddingY  + cellSize * (size - 1), size - 1, size - 1, cellSize, 0.6 * cellSize);
 
         // Paint the stones
         for(int i = 0; i < board.length; i++)
@@ -233,6 +231,10 @@ public class BoardPane extends Pane {
         int rowAlgebraic = size - row;
         char colAlgebraic = (char) ('A' + col);
         return Character.toString(colAlgebraic) + rowAlgebraic;
+    }
+    
+    public boolean hasStoneAt(int row, int col) {
+        return board[row][col] != null;
     }
 
 }

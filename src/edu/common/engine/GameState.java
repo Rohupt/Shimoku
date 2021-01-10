@@ -105,33 +105,6 @@ public class GameState {
         return index >= 0 && index < size;
     }
 
-    /**
-     * Iterates along the board from a start position and counts the
-     * consecutive stones belonging to a player. The row/column increment
-     * defines the direction of the iteration - e.g. +1, -1 would iterate
-     * diagonally down to the right. The start position must be occupied by
-     * the player in question.
-     * @param row Row start pos
-     * @param col Column start pos
-     * @param rowIncrement Row increment
-     * @param colIncrement Column increment
-     * @return The number of consecutive unbroken stones found
-     */
-    private int countConsecutiveStones(int row, int col, int rowIncrement, int colIncrement) {
-        int count = 0;
-        int index = board[row][col];
-        for(int i = 1; i <= 3; i++) {
-            if(inBounds(row + (rowIncrement*i)) && inBounds(col + (colIncrement*i))) {
-                if(board[row + (rowIncrement*i)][col + (colIncrement*i)] == index) {
-                    count++;
-                } else {
-                    break;
-                }
-            }
-        }
-        return count;
-    }
-    
     private boolean checkDirection(int row, int col, int rowVector, int colVector) {
         int count = 0;
         int index = board[row][col];

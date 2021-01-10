@@ -184,44 +184,6 @@ public class Game {
             room.removeGame();
         };
     }
-
-    private void sendTimeUpdates(int playerIndex) {
-        this.timeUpdateSender = new TimerTask() {
-            long startTime = System.currentTimeMillis();
-            long moveTime = settings.getMoveTimeMillis();
-            long gameTime = times[playerIndex - 1];
-            @Override
-            public void run() {
-                long elapsed = System.currentTimeMillis() - startTime;
-                gameTime -= elapsed;
-                moveTime -= elapsed;
-                // Broadcast the elapsed times since the last TimerTask
-                if(settings.gameTimingEnabled()) {
-//                    listeners.forEach(listener -> listener.gameTimeChanged
-//                            (playerIndex, gameTime));V
-                }
-                if(settings.moveTimingEnabled()) {
-//                    listeners.forEach(listener -> listener.moveTimeChanged
-//                            (playerIndex, moveTime));
-                }
-                startTime = System.currentTimeMillis();
-            }
-        };
-        timer.scheduleAtFixedRate(timeUpdateSender, 0, 100);
-    }
-
-    private void stopTimeUpdates() {
-        timeUpdateSender.cancel();
-    }
-
-    private static String gameOver(int index) {
-        return String.format("Game over, winner: Player %d.", index);
-    }
-
-    private static String timeout(int index) {
-        return String.format("Player %d ran out of time.", index);
-    }
-
     public Player[] getPlayers() {
         return players;
     }
