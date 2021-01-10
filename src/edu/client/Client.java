@@ -21,12 +21,9 @@ public class Client implements Runnable{
 
     public String playerName;
 
-    private boolean isServerDied = false;
-
     public Client(String host, int port) {
         this.host = host;
         this.port = port;
-        this.listener = new EventListener(this);
         
     }
 
@@ -35,7 +32,7 @@ public class Client implements Runnable{
             socket = new Socket(host, port);
             out = new DataOutputStream(socket.getOutputStream());
             in = new DataInputStream(socket.getInputStream());
-            listener = new EventListener(this);
+            listener = new EventListener();
             new Thread(this).start();
             System.out.println("Connected to server.");
             Application.launch(App.class);
@@ -53,11 +50,6 @@ public class Client implements Runnable{
         try {
             running = false;
             if (socket != null) {
-                if (!socket.isClosed() && !isServerDied) {
-//                    RemoveConnectionPacket removeConnectionPacket = new RemoveConnectionPacket(this.id, this.playerName);
-//                    sendObject(removeConnectionPacket);
-                }
-
                 if (!socket.isClosed()) {
                     in.close();
                     out.close();
@@ -81,6 +73,10 @@ public class Client implements Runnable{
         }
     }
 
+    public EventListener getListener() {
+        return listener;
+    }
+
     @Override
     public void run() {
         try {
@@ -95,7 +91,6 @@ public class Client implements Runnable{
                     close();
                 } catch (EOFException e) {
                     e.printStackTrace();
-                    isServerDied = true;
                     close();
                     System.out.println("Disconnected from server!");
                 }
@@ -103,13 +98,5 @@ public class Client implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public EventListener getListener() {
-        return listener;
-    }
-
-    public Socket getSocket() {
-        return socket;
     }
 }

@@ -11,10 +11,6 @@ public class Player {
     private StonePut spPacket;
     private Connection connection;
 
-    /**
-     * Create a new player.
-     * @param username Game information
-     */
     public Player(String username, Connection connection) {
         this.username = username;
         this.connection = connection;
@@ -24,13 +20,7 @@ public class Player {
         this.move = move;
     }
 
-    /**
-     * Request a move from this player.
-     * @param state Current game state
-     * @return Move the player wants to make
-     */
     public Move getMove(GameState state){
-        // Suspend until the user clicks a valid move (handled by the game)
         return move;
     }
 

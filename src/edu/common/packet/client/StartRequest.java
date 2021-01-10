@@ -4,6 +4,6 @@ import edu.common.packet.Packet;
 
 public class StartRequest extends Packet {
     public StartRequest() {
-        this.setId("sr");
+        super("sr");
     }
 }

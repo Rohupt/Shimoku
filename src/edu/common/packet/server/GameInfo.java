@@ -11,7 +11,7 @@ public class GameInfo extends Packet {
     private String hostUsername;
 
     public GameInfo(RuleSet ruleSet, String hostUsername) {
-        this.setId("gi");
+        super("gi");
         this.ruleSet = ruleSet;
         this.hostUsername = hostUsername;
     }

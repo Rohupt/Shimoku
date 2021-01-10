@@ -1,23 +1,12 @@
 package edu.common.engine;
-/**
- * Created by Doston Hamrakulov
- */
 
 import java.util.Objects;
 
-/**
- * Represents a move or position on the Gomoku board.
- */
 public class Move {
 
     public final int row;
     public final int col;
 
-    /**
-     * Create a new move.
-     * @param row Row identifer
-     * @param col Column identifier
-     */
     public Move(int row, int col) {
         this.row = row;
         this.col = col;

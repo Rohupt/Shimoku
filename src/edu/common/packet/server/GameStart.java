@@ -8,7 +8,7 @@ public class GameStart extends Packet {
     private final boolean hostMoveFirst;
     
     public GameStart(boolean hostMoveFirst) {
-        this.setId("gs");
+        super("gs");
         this.hostMoveFirst = hostMoveFirst;
     }
 

@@ -74,7 +74,7 @@
                   <ComboBox fx:id="gameTimeComboBox" disable="true" maxWidth="Infinity" value="20" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                   <CheckBox fx:id="moveTimingCheckBox" text="Move timing enabled" GridPane.columnSpan="2" GridPane.rowIndex="5" />
                   <Label text="Time/move (secs):" GridPane.columnIndex="0" GridPane.rowIndex="6" />
-                  <ComboBox fx:id="moveTimeComboBox" disable="true" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                  <ComboBox fx:id="moveTimeComboBox" disable="true" maxWidth="Infinity" value="10" GridPane.columnIndex="1" GridPane.rowIndex="6" />
                   <Label styleClass="heading" text="Board" GridPane.columnSpan="2" GridPane.rowIndex="7" />
                   <Separator GridPane.columnSpan="2" GridPane.rowIndex="8" />
                   <Label text="Board Size (n*n):" GridPane.columnIndex="0" GridPane.rowIndex="9" />

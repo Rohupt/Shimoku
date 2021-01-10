@@ -6,9 +6,7 @@ import edu.common.engine.Room;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.Arrays;
-import java.util.Map;
 
 public class Connection implements Runnable {
     private Socket socket;
@@ -35,11 +33,6 @@ public class Connection implements Runnable {
         }
     }
 
-
-    /**
-     * Run a thread of specific client
-     * Read input of Client to Server
-     */
     @Override
     public void run() {
         running = true;
@@ -61,9 +54,6 @@ public class Connection implements Runnable {
         }
     }
 
-    /**
-     * Close socket and connection
-     */
     public void close() {
         try {
 //          Missing some code
@@ -76,11 +66,6 @@ public class Connection implements Runnable {
         }
     }
 
-    /**
-     * @param packet
-     * Convert Object Response packet to String
-     * Send string of response object to Client Socket
-     */
     public void sendObject(Object packet) {
         InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
         try {
@@ -144,7 +129,7 @@ public class Connection implements Runnable {
         this.room = room;
     }
     
-    public String ipToHex() {
+    public String ipToCode() {
         InetSocketAddress isa = (InetSocketAddress) this.getSocket().getRemoteSocketAddress();
         if (isa == null) return null;
         byte[] ia = isa.getAddress().getAddress();

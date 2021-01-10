@@ -12,7 +12,7 @@ public class RuleSet extends Packet {
     private long moveTime;
 
     public RuleSet(int size, long gameTime, long moveTime) {
-        this.setId("rs");
+        super("rs");
         this.size = size;
         this.gameTime = gameTime;
         this.moveTime = moveTime;

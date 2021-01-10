@@ -1,16 +1,10 @@
 package edu.common.engine;
-/**
- * Created by Doston Hamrakulov
- */
 
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-/**
- * State for a Gomoku game.
- */
 public class GameState {
 
     private final int size;
@@ -18,10 +12,6 @@ public class GameState {
     private final LinkedList<Move> moves;
     private int currentIndex;
 
-    /**
-     * Create a new game state.
-     * @param size Board size
-     */
     public GameState(int size) {
         this.size = size;
         this.board = new int[size][size];
@@ -29,11 +19,6 @@ public class GameState {
         this.currentIndex = 1;
     }
 
-    /**
-     * Return the terminal status of the game.
-     * @return 0 if not terminal, the player index of the winning player, or
-     * 3 if the game ended in a draw.
-     */
     protected int terminal() {
         if(isWinner(1)) return 1;
         if(isWinner(2)) return 2;
@@ -41,45 +26,24 @@ public class GameState {
         return 0;
     }
 
-    /**
-     * Get the current player index for this state
-     * @return Current player # who has to make a move
-     */
     protected int getCurrentIndex() {
         return this.currentIndex;
     }
 
-    /**
-     * Get an ordered list of moves that were made on this state.
-     * @return ArrayList of moves, ordered from first move to last move made
-     */
     public List<Move> getMoves() {
         return new ArrayList(moves);
     }
 
-    /**
-     * Return the last move made on this state.
-     * @return Previous move that was made
-     */
     public Move getLastMove() {
         return !moves.isEmpty() ? moves.peek() : null;
     }
 
-    /**
-     * Make a move on this state.
-     * @param move Move to make
-     */
     protected void makeMove(Move move) {
         this.moves.addFirst(move);
         this.board[move.row][move.col] = currentIndex;
         this.currentIndex = currentIndex == 1 ? 2 : 1;
     }
 
-    /**
-     * Determine if the specified player has won the game
-     * @param playerIndex Player index (1 or 2)
-     * @return True if the index has won
-     */
     private boolean isWinner(int playerIndex) {
         if(moves.size() < 5) return false;
         Move lastMove = getLastMove();
@@ -95,12 +59,6 @@ public class GameState {
         return false;
     }
 
-    /**
-     * Helper method to check if an index lies within the bounds of the board.
-     * @param index Value to check
-     * @return True if this value lies between the bounds of the board (0 to
-     * size - 1)
-     */
     private boolean inBounds(int index) {
         return index >= 0 && index < size;
     }

@@ -11,7 +11,7 @@ public class StonePut extends Packet {
     private long time;
 
     public StonePut(int x, int y) {
-        this.setId("sp");
+        super("sp");
         this.x = x;
         this.y = y;
         this.time = 0;

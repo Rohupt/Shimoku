@@ -1,4 +1,4 @@
-package edu.server.room;
+package edu.server;
 
 import edu.common.engine.Room;
 import java.util.LinkedList;

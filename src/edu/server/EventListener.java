@@ -6,7 +6,6 @@ import edu.common.packet.*;
 import edu.common.packet.client.*;
 import edu.common.packet.server.*;
 import edu.common.engine.*;
-import edu.server.room.RoomList;
 import java.net.InetSocketAddress;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -81,7 +80,7 @@ public class EventListener {
         con.setRoom(room);
 
         // Create new ID for this room
-        room.setRoomID(con.ipToHex());
+        room.setRoomID(con.ipToCode());
 
         // Add room to the end of room list
         RoomList.getRoomList().addLast(room);
@@ -98,20 +97,22 @@ public class EventListener {
         GameSettings temp = new GameSettings(room.getSettings());
         boolean successed = false;
         try {
-            room.getSettings().setSize(rsPacket.getSize());
-            
-            if (rsPacket.getGameTime() == -1) {
-                room.getSettings().setGameTimingEnabled(false);
-            } else {
-                room.getSettings().setGameTimingEnabled(true);
-                room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
-            }
-            
-            if (rsPacket.getMoveTime() == -1) {
-                room.getSettings().setMoveTimingEnabled(false);
-            } else {
-                room.getSettings().setMoveTimingEnabled(true);
-                room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
+            if (!rsPacket.toGameSettings().equals(room.getSettings())) {
+                room.getSettings().setSize(rsPacket.getSize());
+
+                if (rsPacket.getGameTime() == -1) {
+                    room.getSettings().setGameTimingEnabled(false);
+                } else {
+                    room.getSettings().setGameTimingEnabled(true);
+                    room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
+                }
+
+                if (rsPacket.getMoveTime() == -1) {
+                    room.getSettings().setMoveTimingEnabled(false);
+                } else {
+                    room.getSettings().setMoveTimingEnabled(true);
+                    room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
+                }
             }
             successed = true;
         } catch (Exception e) {
@@ -214,7 +215,7 @@ public class EventListener {
         }
         if (room.checkHost(con)) {
             room.setHost(players[1]);
-            room.setRoomID(room.getHost().getConnection().ipToHex());
+            room.setRoomID(room.getHost().getConnection().ipToCode());
             RuleSet ruleSet = new RuleSet(room.getSettings().getSize(),
                                 room.getSettings().gameTimingEnabled() ? room.getSettings().getGameTimeMillis() : -1,
                                 room.getSettings().moveTimingEnabled() ? room.getSettings().getMoveTimeMillis() : -1);
@@ -225,7 +226,8 @@ public class EventListener {
 
     private void handleTurnStart(Connection con) {
         Game game = con.getRoom().getGame();
-        game.resumeTurn();
+        if (game != null)
+            game.resumeTurn();
     }
 
     private Room findRoom(String roomID){

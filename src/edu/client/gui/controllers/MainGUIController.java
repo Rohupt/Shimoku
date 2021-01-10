@@ -11,12 +11,18 @@ import java.net.URL;
 import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.IntStream;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.layout.GridPane;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -25,11 +31,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.IntStream;
-import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
@@ -123,6 +124,7 @@ public class MainGUIController implements Initializable {
     private byte position; // 1 is host, 2 is guest, 0 is not set
     private boolean isBlack;
     private boolean drawOfferSent;
+    private boolean interrupted = false;
     private long time;
     private StonePut tempSP;
     private Future<StonePut> futureSP;
@@ -145,8 +147,8 @@ public class MainGUIController implements Initializable {
         joinBtn.setDisable(true);
         nameField.requestFocus();
         
-        gameTimeComboBox.getItems().addAll(IntStream.rangeClosed(1, 12).map(x -> x * 5).boxed().toArray(Integer[]::new));
-        moveTimeComboBox.getItems().addAll(IntStream.rangeClosed(1, 12).map(x -> x * 5).boxed().toArray(Integer[]::new));
+        gameTimeComboBox.getItems().addAll(IntStream.rangeClosed(2, 12).map(x -> x * 5).boxed().toArray(Integer[]::new));
+        moveTimeComboBox.getItems().addAll(IntStream.rangeClosed(2, 12).map(x -> x * 5).boxed().toArray(Integer[]::new));
         sizeComboBox.getItems().addAll(IntStream.rangeClosed(9, 25).boxed().toArray(Integer[]::new));
         
         addHandlers();
@@ -213,12 +215,13 @@ public class MainGUIController implements Initializable {
                 if (clearBoard) {
                     ClientMain.getRoom().setGuest(null);
                     guestNameLabel.setText("");
-                    loadTimeLabels();
                 }
+                loadTimeLabels();
                 startBtn.setDisable(ClientMain.getRoom().getGuest() == null);
                 break;
             case 2:
                 startBtn.setDisable(true);
+                loadTimeLabels();
                 break;
         }
         gamePane.setDisable(p != 0);
@@ -240,6 +243,19 @@ public class MainGUIController implements Initializable {
     
     private void sendObject(Object o) {
         ClientMain.getClient().sendObject(o);
+    }
+    
+    private void switchStartBtn(boolean reset) {
+        if (reset) {
+            startBtn.setText("Reset Board");
+            startBtn.setOnAction(e -> {
+                updateSettings();
+                switchStartBtn(false);
+            });
+        } else {
+            startBtn.setText("Start Game");
+            startBtn.setOnAction(e -> startGame());
+        }
     }
     
     private Alert alert(AlertType type, String title, String content) {
@@ -305,6 +321,13 @@ public class MainGUIController implements Initializable {
         gameTimingCheckBox.setSelected(settings.gameTimingEnabled());
         moveTimingCheckBox.setSelected(settings.moveTimingEnabled());
         loadTimeLabels();
+    }
+    
+    private void resetBoard() {
+        board = new BoardPane(getSettings().getSize());
+        boardContainer.setCenter(board);
+        resizeCanvas();
+        switchStartBtn(false);
     }
     
     private void loadTimeLabels() {
@@ -399,10 +422,10 @@ public class MainGUIController implements Initializable {
         Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to offer a draw?");
         alert.getButtonTypes().clear();
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES) {
             sendObject(new OfferDraw());
+            notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
             drawBtn.setDisable(true);
             drawOfferSent = true;
         }
@@ -457,6 +480,7 @@ public class MainGUIController implements Initializable {
     private Runnable getRunnable() {
         return () -> {
             tempSP = null;
+            interrupted = false;
             if (ClientMain.getRoom().getSettings().gameTimingEnabled() || ClientMain.getRoom().getSettings().moveTimingEnabled())
                 time = System.currentTimeMillis();
 
@@ -484,8 +508,8 @@ public class MainGUIController implements Initializable {
                     sendObject(futureSP.get());
                 board.addStone(isBlack ? 1 : 2, tempSP.getX(), tempSP.getY(), false);
                 notifBoard.appendText(String.format("Your move: %s\n", BoardPane.convertMoveAlgebraic(tempSP.getX(), tempSP.getY(), getSettings().getSize())));
-            } catch (InterruptedException | ExecutionException ex) {
-                ex.printStackTrace();
+            } catch (InterruptedException | ExecutionException | CancellationException ex) {
+                interrupted = true;
             } catch (TimeoutException ex) {
                 sendObject(new StonePut(-1, -1));
             } finally {
@@ -493,23 +517,27 @@ public class MainGUIController implements Initializable {
                 //TODO: Stop the clock
                 Platform.runLater(() -> {
                     stopTimeUpdates();
+                    board.disableStonePicker();                    
+                });
+            }
+            Platform.runLater(() -> {
+                if (!interrupted) {
                     if (getSettings().gameTimingEnabled()) {
                         times[position - 1] -= time;
                         gameTimeChanged(position == 1, times[position - 1]);
                     }
                     if (getSettings().moveTimingEnabled())
                         resetMoveTimeLabels();
-                    board.disableStonePicker();
                     turnLabel.setText(String.format("%s", position == 1 ? "\u25b6" : "\u25c0"));
                     turnLabel.setTextFill(isBlack ? Color.BLACK : Color.WHITE);
                     turnLabel.setBackground(new Background(new BackgroundFill(isBlack ? Color.WHITE : Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
                     sendTimeUpdates(position == 2);
-                    if ("Agree to Offer".equals(drawBtn.getText())) {
-                        drawBtn.setText("Offer Draw");
-                        drawBtn.setOnAction(e -> offerDraw());
-                    }
-                });
-            }
+                }
+                if ("Agree to Offer".equals(drawBtn.getText())) {
+                    drawBtn.setText("Offer Draw");
+                    drawBtn.setOnAction(e -> offerDraw());
+                }
+            });
             Thread.currentThread().interrupt();
         };
     }
@@ -547,6 +575,14 @@ public class MainGUIController implements Initializable {
             TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis))
         );
     }
+    
+    private boolean settingIdentical() {
+        return getSettings().getMoveTimeMillis() == TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS)
+            && getSettings().getGameTimeMillis() == TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES)
+            && getSettings().gameTimingEnabled() == gameTimingCheckBox.isSelected()
+            && getSettings().moveTimingEnabled() == moveTimingCheckBox.isSelected()
+            && getSettings().getSize() == sizeComboBox.getValue();
+    }
 
     public void handleIDPacket(GameID idPacket) {
         Player host = new Player(nameField.getText(), null);
@@ -565,25 +601,35 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleRuleChanges(RuleSet rsPacket) {
-        ClientMain.getRoom().setSettings(rsPacket.toGameSettings());
-        loadSettings();
-        notifBoard.appendText("WARNING: Game rules changed.\n");
+        if (!rsPacket.toGameSettings().equals(getSettings())) {
+            ClientMain.getRoom().setSettings(rsPacket.toGameSettings());
+            loadSettings();
+            notifBoard.appendText("WARNING: Game rules changed.\n");
+        } else
+            notifBoard.appendText("Board reset.\n");
+        resetBoard();
     }
 
     public void handleRuleConfirmed(ConfirmRules cfPacket) {
         if (cfPacket.isSuccessful()) {
-            getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
-            getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
-            getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
-            getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
-            getSettings().setSize(sizeComboBox.getValue());
-            loadTimeLabels();
-            settingsPane.setDisable(false);
-            notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
+            if (!settingIdentical()) {
+                getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
+                getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
+                getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
+                getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
+                getSettings().setSize(sizeComboBox.getValue());
+                loadTimeLabels();
+                notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
+            } else {
+                notifBoard.appendText("Board reset.\n");
+            }
+            if (ClientMain.getRoom().getGuest() != null)
+                resetBoard();
         } else {
             loadSettings();
             notifBoard.appendText("FAILED: Game rules failed to change.\n");
         }
+        settingsPane.setDisable(false);
     }
 
     public void handleGuestFound(GuestFound gfPacket) {
@@ -593,10 +639,10 @@ public class MainGUIController implements Initializable {
         loadTimeLabels();
         startBtn.setDisable(false);
         notifBoard.appendText("GUEST JOINED: User \"" + guest.getUsername() + "\" has joined.\n");
+        resetBoard();
     }
 
     public void handleGameInfo(GameInfo giPacket) {
-        setPosition((byte) 2, true);
         Player host = new Player(giPacket.getHostUsername(), null);
         Player guest = new Player(nameField.getText(), null);
         Room room = new Room();
@@ -605,7 +651,9 @@ public class MainGUIController implements Initializable {
         room.setRoomID(codeField.getText());
         room.setSettings(giPacket.getRuleSet().toGameSettings());
         ClientMain.setRoom(room);
+        setPosition((byte) 2, true);
         loadSettings();
+        resetBoard();
         hostNameLabel.setText(host.getUsername());
         guestNameLabel.setText(guest.getUsername());
         codeLabel.setText(room.getRoomID());
@@ -627,17 +675,15 @@ public class MainGUIController implements Initializable {
     }
 
     public void handleGameStart(GameStart gsPacket) {
+        isBlack = gsPacket.isHostMoveFirst() ? position == 1 : position == 2;
         setInGame(true);
-        board = new BoardPane(getSettings().getSize());
-        boardContainer.setCenter(board);
-        resizeCanvas();
+        notifBoard.appendText(String.format("GAME STARTED: %s will move first.\n", isBlack ? "you" : "opponent"));
         if (getSettings().gameTimingEnabled()) {
             times[0] = getSettings().getGameTimeMillis();
             times[1] = getSettings().getGameTimeMillis();
         }
+        loadTimeLabels();
         drawBtn.setOnAction(e -> offerDraw());
-        isBlack = gsPacket.isHostMoveFirst() ? position == 1 : position == 2;
-        notifBoard.appendText(String.format("GAME STARTED: %s will move first.\n", isBlack ? "you" : "opponent"));
         if (isBlack)
             requestMove();
         else {
@@ -657,7 +703,7 @@ public class MainGUIController implements Initializable {
         if (getSettings().moveTimingEnabled())
             resetMoveTimeLabels();
         if (drawOfferSent) {
-            notifBoard.appendText("REJECTED: Opponent rejected your draw offer. Game continues.");
+            notifBoard.appendText("REJECTED: Opponent rejected your draw offer. Game continues.\n");
             drawOfferSent = false;
             drawBtn.setDisable(false);
         }
@@ -671,6 +717,19 @@ public class MainGUIController implements Initializable {
         board.setOnMouseClicked(null);
         board.disableStonePicker();
         stopTimeUpdates();
+        if (futureSP != null)
+            if (!futureSP.isDone())
+                futureSP.cancel(true);
+        if (moveThread != null)
+            if (moveThread.isAlive()) {
+                moveThread.interrupt();
+                try {
+                    moveThread.join();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        resetGame();
         String result = gePacket.getEndingType() == GameEnd.EndingType.DRAW
                 ? "IT'S A DRAW!" : (gePacket.getEndingType() == GameEnd.EndingType.HOST_WON && position == 1) || (gePacket.getEndingType() == GameEnd.EndingType.GUEST_WON && position == 2)
                 ? "YOU WON!" : "YOU LOST!";
@@ -685,8 +744,9 @@ public class MainGUIController implements Initializable {
             case BY_WINNING_MOVE: reason = result.equals("YOU WON!") ? "Oh, that was merciless." : "Next time mind your back a little, won't you?"; break;
         }
         notifBoard.appendText(String.format("%s %s\n", result, reason));
-        resetGame();
         setPosition(position, gePacket.getReason() == GameEnd.ReasonType.BY_OPPONENT_LEFT);
+        if (position == 1)
+            switchStartBtn(true);
     }
 
     public void handleDrawOffer() {

@@ -26,18 +26,8 @@ public class Server implements Runnable{
     }
 
 
-    /**
-     * @param socket
-     * Function initSocket
-     * Param Socket socket
-     * Create a socket connection and a thread when a Client
-     * connects to Server
-     * ConnectionHandler.connections.put used to put connection
-     * to list of connection of Client in Server
-     */
     private void initSocket(Socket socket) {
         Connection connection = new Connection(socket, id);
-//        ConnectionHandler.connections.put(id, connection);
         new Thread(connection).start();
         InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
         System.out.printf("Client connected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());

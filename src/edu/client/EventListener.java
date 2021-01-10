@@ -1,35 +1,17 @@
 package edu.client;
 
 import com.google.gson.Gson;
-import edu.client.events.GameListener;
 import edu.client.gui.controllers.MainGUIController;
 import edu.common.packet.*;
 import edu.common.packet.server.*;
 
-import java.util.LinkedList;
-import java.util.List;
 import javafx.application.Platform;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class EventListener  {
-    private final List<GameListener> listeners;
-    private final Client client;
     private MainGUIController controller;
-
-    public EventListener(Client client) {
-        this.listeners = new LinkedList<>();
-        this.client = client;
-    }
-
-    public void addListener(GameListener listener) {
-        this.listeners.add(listener);
-    }
-
-    public List<GameListener> getListeners() {
-        return listeners;
-    }
 
     public void received_data(String p) {
         JSONParser parser = new JSONParser();

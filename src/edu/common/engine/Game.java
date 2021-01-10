@@ -6,18 +6,13 @@ import edu.common.packet.server.GameStart;
 
 import java.util.concurrent.*;
 
-/**
- * Main game loop responsible for running the game from start to finish.
- */
 public class Game {
 
-//    private final List<GameListener> listeners;
     private final boolean hostMoveFirst;
     private final GameSettings settings;
     private final ExecutorService executor;
     private Player[] players;
     private final long[] times;
-    private Future<Move> futureMove;
     private Future<StonePut> futureSpPacket;
     private final Thread gameThread;
     private GameState state;
@@ -168,7 +163,6 @@ public class Game {
             this.gameThread.notify();
         }
     }
-    
     
     public Player[] getPlayers() {
         return players;

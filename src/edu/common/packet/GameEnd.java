@@ -19,7 +19,7 @@ public class GameEnd extends Packet{
     private ReasonType reason;
 
     public GameEnd() {
-        this.setId("ge");
+        super("ge");
     }
 
     public GameEnd(EndingType endingType, ReasonType reason) {

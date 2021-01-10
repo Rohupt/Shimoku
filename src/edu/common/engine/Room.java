@@ -1,10 +1,6 @@
 package edu.common.engine;
 
 import edu.server.Connection;
-import java.net.InetSocketAddress;
-import java.util.Arrays;
-
-import java.util.Objects;
 
 public class Room {
     private Game game;
@@ -13,15 +9,9 @@ public class Room {
     private Player guest;
     private GameSettings settings;
 
-    /**
-     * @param con
-     * @return players[]
-     * players[0] = player with this con
-     * players[1] = player remainder
-     */
     public Player[] getSortedPlayers(Connection con){
         Player[] roomPlayers = new Player[2];
-        if (host.getConnection().ipToHex().equals(con.ipToHex())) {
+        if (host.getConnection().ipToCode().equals(con.ipToCode())) {
             roomPlayers[0] = host;
             roomPlayers[1] = guest;
         } else {
@@ -80,19 +70,5 @@ public class Room {
         newGame.setPlayer1(host);
         newGame.setPlayer2(guest);
         this.game = newGame;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(this.roomID);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Room) {
-            Room room = (Room) obj;
-            return (room.roomID == null ? this.roomID == null : room.roomID.equals(this.roomID));
-        }
-        return false;
     }
 }

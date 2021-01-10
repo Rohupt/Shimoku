@@ -116,7 +116,7 @@ public class BoardPane extends Pane {
     private static void paintStone(GraphicsContext gc, double startX, double  startY, double cellSize, int row, int col, int index,  boolean transparent) {
         double x = startX + col*cellSize;
         double y = startY + row*cellSize;
-        double stoneSize = 0.8;
+        double stoneSize = 0.9;
         double offset = (cellSize * stoneSize) / 2;
         gc.save();
         if(transparent) {
