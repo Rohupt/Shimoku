@@ -38,10 +38,8 @@ public class BoardPane extends Pane {
         this.board = new BoardStone[size][size];
         this.canvas = new Canvas();
         this.getChildren().add(canvas);
-        widthProperty().addListener((observable, oldValue, newValue) ->
-                canvas.setWidth(newValue.intValue()));
-        heightProperty().addListener((observable, oldValue, newValue) ->
-                canvas.setHeight(newValue.intValue()));
+        widthProperty().addListener((observable, oldValue, newValue) -> canvas.setWidth(newValue.intValue()));
+        heightProperty().addListener((observable, oldValue, newValue) -> canvas.setHeight(newValue.intValue()));
     }
 
     public void setIntersections(int intersections) {
@@ -83,8 +81,7 @@ public class BoardPane extends Pane {
         gc.restore();
     }
 
-    private void drawNumbers(GraphicsContext gc, double startX, double
-            startY, int rows, int columns, double cellSize, double distance) {
+    private void drawNumbers(GraphicsContext gc, double startX, double startY, int rows, int columns, double cellSize, double distance) {
         gc.save();
         gc.setFont(BOARD_FONT);
         gc.setFill(Color.rgb(0,0,0, 0.75));
@@ -97,8 +94,7 @@ public class BoardPane extends Pane {
         gc.restore();
     }
 
-    private void drawLetters(GraphicsContext gc, double startX, double
-            startY, int rows, int columns, double cellSize, double distance) {
+    private void drawLetters(GraphicsContext gc, double startX, double startY, int rows, int columns, double cellSize, double distance) {
         gc.save();
         gc.setFont(BOARD_FONT);
         gc.setFill(Color.rgb(0,0,0, 0.75));
@@ -111,23 +107,17 @@ public class BoardPane extends Pane {
         gc.restore();
     }
 
-    private static final RadialGradient whiteGradient = new RadialGradient(55, 0.75, 0.5, 0.5, 0.5, true,
-            CycleMethod.NO_CYCLE,
-            new Stop(0, Color.WHITE),
-            new Stop(1, Color.web("#A0A0A0"))
-    );
+    private static final RadialGradient whiteGradient =
+        new RadialGradient(55, 0.75, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE, new Stop(0, Color.WHITE), new Stop(1, Color.web("#A0A0A0")));
 
-    private static final RadialGradient blackGradient = new RadialGradient(55, 0.75, 0.5, 0.5, 0.5, true,
-            CycleMethod.NO_CYCLE,
-            new Stop(1, Color.web("#222")),
-            new Stop(0, Color.web("#A0A0A0"))
-    );
+    private static final RadialGradient blackGradient =
+        new RadialGradient(55, 0.75, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE, new Stop(1, Color.web("#222")), new Stop(0, Color.web("#A0A0A0")));
 
-    private static void paintStone(GraphicsContext gc, double startX, double  startY, double cellSize,
-            int row, int col, int index,  boolean transparent) {
+    private static void paintStone(GraphicsContext gc, double startX, double  startY, double cellSize, int row, int col, int index,  boolean transparent) {
         double x = startX + col*cellSize;
         double y = startY + row*cellSize;
-        double offset = (cellSize * 0.7) / 2;
+        double stoneSize = 0.8;
+        double offset = (cellSize * stoneSize) / 2;
         gc.save();
         if(transparent) {
             gc.setGlobalAlpha(0.5);
@@ -135,13 +125,11 @@ public class BoardPane extends Pane {
         switch(index) {
             case 1:
                 gc.setFill(blackGradient);
-                gc.fillOval(x - offset, y - offset, cellSize * 0.7,
-                        cellSize * 0.7);
+                gc.fillOval(x - offset, y - offset, cellSize * stoneSize, cellSize * stoneSize);
                 break;
             case 2:
                 gc.setFill(whiteGradient);
-                gc.fillOval(x - offset, y - offset, cellSize * 0.7,
-                        cellSize * 0.7);
+                gc.fillOval(x - offset, y - offset, cellSize * stoneSize, cellSize * stoneSize);
                 break;
         }
         gc.restore();

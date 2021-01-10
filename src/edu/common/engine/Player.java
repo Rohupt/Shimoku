@@ -2,11 +2,13 @@ package edu.common.engine;
 
 import edu.server.Connection;
 import edu.common.engine.GameState;
+import edu.common.packet.StonePut;
 
 public class Player {
 
     private String username;
     private Move move;
+    private StonePut spPacket;
     private Connection connection;
 
     /**
@@ -29,6 +31,10 @@ public class Player {
      */
     public Move getMove(GameState state){
         // Suspend until the user clicks a valid move (handled by the game)
+        return move;
+    }
+
+    public StonePut getSpPacket() {
         try {
             synchronized(this) {
                 this.wait();
@@ -36,7 +42,11 @@ public class Player {
         } catch(InterruptedException e) {
             return null;
         }
-        return move;
+        return spPacket;
+    }
+
+    public void setSpPacket(StonePut spPacket) {
+        this.spPacket = spPacket;
     }
 
     public String getUsername() {

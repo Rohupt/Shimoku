@@ -4,8 +4,6 @@ import edu.common.packet.GameEnd;
 import edu.common.packet.StonePut;
 import edu.common.packet.server.GameStart;
 
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.*;
 
 /**
@@ -19,10 +17,9 @@ public class Game {
     private final ExecutorService executor;
     private Player[] players;
     private final long[] times;
-    private final Timer timer;
     private Future<Move> futureMove;
-    private Thread gameThread;
-    private TimerTask timeUpdateSender;
+    private Future<StonePut> futureSpPacket;
+    private final Thread gameThread;
     private GameState state;
     private final Room room;
 
@@ -33,7 +30,6 @@ public class Game {
         this.players = new Player[2];
         this.executor = Executors.newSingleThreadExecutor();
         this.gameThread = new Thread(getRunnable());
-        this.timer = new Timer();
         this.state = new GameState(settings.getSize());
         this.hostMoveFirst = ThreadLocalRandom.current().nextBoolean();
     }
@@ -43,7 +39,6 @@ public class Game {
             this.state = new GameState(settings.getSize());
             times[0] = settings.getGameTimeMillis();
             times[1] = settings.getGameTimeMillis();
-            this.gameThread = new Thread(getRunnable());
             this.gameThread.start();
         }
     }
@@ -56,11 +51,9 @@ public class Game {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if(!futureMove.isDone()) {
-                futureMove.cancel(true);
+            if(!futureSpPacket.isDone()) {
+                futureSpPacket.cancel(true);
             }
-            //Turn this on when setting clock
-            //timeUpdateSender.cancel();
         }
     }
 
@@ -68,36 +61,29 @@ public class Game {
         return settings;
     }
 
-//    public void addListener(GameListener listener) {
-//        this.listeners.add(listener);
-//    }
-
-    private Move requestMove(int playerIndex, Move lastMove) throws
-            InterruptedException, ExecutionException, TimeoutException {
+    private StonePut requestSpPacket(int playerIndex) throws InterruptedException, ExecutionException, TimeoutException {
         Player player = players[playerIndex - 1];
         long timeout = calculateTimeoutMillis(playerIndex);
-        this.futureMove = executor.submit(() -> player.getMove(state));
-        if (lastMove != null)
-            player.getConnection().sendObject(new StonePut(lastMove.row,lastMove.col));
+        this.futureSpPacket = executor.submit(() -> player.getSpPacket());
 
         if (timeout > 0) {
             try {
-                return futureMove.get(timeout, TimeUnit.MILLISECONDS);
+                return futureSpPacket.get(timeout, TimeUnit.MILLISECONDS);
             } catch(TimeoutException ex) {
-                futureMove.cancel(true);
+                futureSpPacket.cancel(true);
                 throw(ex);
             }
         } else {
-            return futureMove.get();
+            return futureSpPacket.get();
         }
-
     }
-
-    public boolean setUserMove(Move move) {
+    
+    public boolean setUserSpPacket(StonePut spPacket) {
+        // TODO: xử lí tình trạng chưa timeout và sau timeout
         Player currentPlayer = players[state.getCurrentIndex() - 1];
-        if(!state.getMoves().contains(move)) {
+        if(!state.getMoves().contains(new Move(spPacket.getX(), spPacket.getY()))) {
             synchronized(currentPlayer) {
-                currentPlayer.setMove(move);
+                currentPlayer.setSpPacket(spPacket);
                 players[state.getCurrentIndex() - 1].notify();
             }
             return true;
@@ -107,16 +93,12 @@ public class Game {
 
     private long calculateTimeoutMillis(int player) {
         if(settings.moveTimingEnabled() && settings.gameTimingEnabled()) {
-            // Both move timing and game timing are enabled
             return Math.min(settings.getMoveTimeMillis(), times[player - 1]);
         } else if(settings.gameTimingEnabled()) {
-            // Only game timing is enabled
             return times[player - 1];
         } else if(settings.moveTimingEnabled()) {
-            // Only move timing is enabled
             return settings.getMoveTimeMillis();
         } else {
-            // No timing is enabled
             return 0;
         }
     }
@@ -133,39 +115,35 @@ public class Game {
 
             while(state.terminal() == 0) {
                 try {
-                    long startTime = System.currentTimeMillis();
-
-                    //Request move from current player
-                    Move move;
-                    if(state.getMoves().isEmpty())
-                        move = requestMove(state.getCurrentIndex(), null);
-                    else
-                        move = requestMove(state.getCurrentIndex(), state.getLastMove());
+                    if (!timeout)
+                        synchronized (Thread.currentThread()) {
+                            Thread.currentThread().wait();
+                        }
                     
+                    long startTime = System.currentTimeMillis();
+                    StonePut spPacket = requestSpPacket(state.getCurrentIndex());
                     long elapsedTime = System.currentTimeMillis() - startTime;
-                    //decrease time game of current player
-                    times[state.getCurrentIndex() - 1] -= elapsedTime;
-                    state.makeMove(move);
-
+                    if (spPacket.timeOut() || (timeout && Math.abs(elapsedTime - spPacket.getTime()) >= 500)) {
+                        timeout = true;
+                        break;
+                    } else {
+                        if (timeout || Math.abs(elapsedTime - spPacket.getTime()) >= 100)
+                            elapsedTime = spPacket.getTime();
+                        times[state.getCurrentIndex() - 1] -= elapsedTime;
+                        state.makeMove(new Move(spPacket.getX(), spPacket.getY()));
+                        players[state.getCurrentIndex() - 1].getConnection().sendObject(spPacket);
+                    }
                 } catch (InterruptedException ex) {
-//                    stopTimeUpdates();
                     return;
                 } catch (ExecutionException ex) {
-//                    stopTimeUpdates();
                     ex.printStackTrace();
                     break;
                 } catch (TimeoutException ex) {
-//                    stopTimeUpdates();
-//                    LOGGER.log(Level.INFO, timeout(state.getCurrentIndex()));
-//                    Xu ly truong hop timeout cho tung buoc di o day
                     timeout = true;
-                    break;
                 }
             }
             if (players[0].getConnection() == null || players[1].getConnection() == null)
                 return;
-            players[state.getCurrentIndex() - 1].getConnection().sendObject(new StonePut(state.getLastMove().row, state.getLastMove().col));
-            // Game end and send message to 2 client
             GameEnd gameEnd = new GameEnd();
             if (state.terminal() == 1 || state.terminal() == 2) {
                 gameEnd.setEndingType((hostMoveFirst ? state.terminal() == 1 : state.terminal() == 2)
@@ -184,6 +162,14 @@ public class Game {
             room.removeGame();
         };
     }
+    
+    public void resumeTurn() {
+        synchronized (this.gameThread) {
+            this.gameThread.notify();
+        }
+    }
+    
+    
     public Player[] getPlayers() {
         return players;
     }

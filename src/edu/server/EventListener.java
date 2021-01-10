@@ -65,6 +65,9 @@ public class EventListener {
                 //Draw Agree
                 handleDrawAgree(con);
                 break;
+            case "ts":
+                //Turn start
+                handleTurnStart(con);
             default:
                 break;
         }
@@ -162,7 +165,7 @@ public class EventListener {
 
     public void handleStonePut(StonePut spPacket,Connection con){
         Game game = con.getRoom().getGame();
-        game.setUserMove(new Move(spPacket.getX(),spPacket.getY()));
+        game.setUserSpPacket(spPacket);
     }
 
     public void handleSurPacket(Connection con){
@@ -218,6 +221,11 @@ public class EventListener {
             room.getHost().getConnection().sendObject(new GameID(room.getRoomID(), ruleSet));
         }
         room.setGuest(null);
+    }
+
+    private void handleTurnStart(Connection con) {
+        Game game = con.getRoom().getGame();
+        game.resumeTurn();
     }
 
     private Room findRoom(String roomID){

@@ -7,11 +7,19 @@ public class StonePut extends Packet {
     private int x;
     @SerializedName("y")
     private int y;
+    @SerializedName("time")
+    private long time;
 
     public StonePut(int x, int y) {
         this.setId("sp");
         this.x = x;
         this.y = y;
+        this.time = 0;
+    }
+
+    public StonePut(int x, int y, long time) {
+        this(x, y);
+        this.time = time;
     }
 
     public int getX() {
@@ -28,5 +36,17 @@ public class StonePut extends Packet {
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    public long getTime() {
+        return time;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
+    }
+    
+    public boolean timeOut() {
+        return x == -1 && y == -1;
     }
 }
