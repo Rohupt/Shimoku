@@ -737,7 +737,6 @@ public class MainGUIController implements Initializable {
         switch (gePacket.getReason()) {
             case BY_BOARD_FULL: reason = "There's no space left to move."; break;
             case BY_AGREEMENT: reason = "You both realized no one could win."; break;
-            case BY_BOTH_DISCONNECTION: reason = "You both disconnected."; break;
             case BY_OPPONENT_LEFT: reason = result.equals("YOU WON!") ? "The opponent cowardly ran away." : "But forfeiting when needed is a great strategem."; break;
             case BY_OPPONENT_SURRENDER: reason = result.equals("YOU WON!") ? "The opponent kneeled under your might." : "No point continuing a losing game."; break;
             case BY_TIMEOUT: reason = result.equals("YOU WON!") ? "Slow deers get captured." : "Maybe you should think a bit faster?"; break;

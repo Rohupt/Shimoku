@@ -10,7 +10,6 @@ public class GameEnd extends Packet{
         BY_OPPONENT_LEFT,
         BY_AGREEMENT,
         BY_BOARD_FULL,
-        BY_BOTH_DISCONNECTION,
         BY_TIMEOUT
     }
     @SerializedName("endingType")

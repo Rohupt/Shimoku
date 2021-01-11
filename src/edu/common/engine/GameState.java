@@ -67,20 +67,26 @@ public class GameState {
         int count = 0;
         int index = board[row][col];
         int opIndex = 3 - index;
+        boolean cont = true;
         for (int i = 1; i < size; i++) {
             if (inBounds(row + rowVector * i) && inBounds(col + colVector * i)) {
-                if (board[row + rowVector * i][col + colVector * i] == index)
+                if (board[row + rowVector * i][col + colVector * i] == index && cont)
                     count++;
                 else if (board[row + rowVector * i][col + colVector * i] == opIndex)
                     return false;
+                else
+                    cont = false;
             } else break;
         }
+        cont = true;
         for (int i = 1; i < size; i++) {
             if (inBounds(row + rowVector * -i) && inBounds(col + colVector * -i)) {
-                if (board[row + rowVector * -i][col + colVector * -i] == index)
+                if (board[row + rowVector * -i][col + colVector * -i] == index && cont)
                     count++;
                 else if (board[row + rowVector * -i][col + colVector * -i] == opIndex)
                     return false;
+                else 
+                    cont = false;
             } else break;
         }
         return count >= 3;
