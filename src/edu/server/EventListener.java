@@ -17,7 +17,7 @@ public class EventListener {
     public void received_data(String p, Connection con) {
         JSONParser parser = new JSONParser();
         JSONObject packetJson = null;
-        try {r
+        try {
             packetJson = (JSONObject) parser.parse(p);
         } catch (ParseException e) {
             e.printStackTrace();
