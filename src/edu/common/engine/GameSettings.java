@@ -69,30 +69,4 @@ public class GameSettings {
 //        listeners.forEach(listener -> listener.settingsChanged());
     }
 
-    @Override
-    public int hashCode() {
-        int hash = 3;
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final GameSettings other = (GameSettings) obj;
-        if (this.size != other.size)
-            return false;
-        if (this.gameTimingEnabled != other.gameTimingEnabled)
-            return false;
-        if (this.moveTimingEnabled != other.moveTimingEnabled)
-            return false;
-        if (this.gameTimeMillis != other.gameTimeMillis)
-            return false;
-        return this.moveTimeMillis == other.moveTimeMillis;
-    }
-
 }

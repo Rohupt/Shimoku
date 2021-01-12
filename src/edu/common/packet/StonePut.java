@@ -47,6 +47,6 @@ public class StonePut extends Packet {
     }
     
     public boolean timeOut() {
-        return x == -1 && y == -1;
+        return time == -1;
     }
 }

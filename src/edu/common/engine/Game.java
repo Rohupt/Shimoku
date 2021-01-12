@@ -1,6 +1,6 @@
 package edu.common.engine;
 
-import edu.common.packet.GameEnd;
+import edu.common.packet.server.GameEnd;
 import edu.common.packet.StonePut;
 import edu.common.packet.server.GameStart;
 
@@ -74,7 +74,6 @@ public class Game {
     }
     
     public boolean setUserSpPacket(StonePut spPacket) {
-        // TODO: xử lí tình trạng chưa timeout và sau timeout
         Player currentPlayer = players[state.getCurrentIndex() - 1];
         if(!state.getMoves().contains(new Move(spPacket.getX(), spPacket.getY()))) {
             synchronized(currentPlayer) {
@@ -118,7 +117,7 @@ public class Game {
                     long startTime = System.currentTimeMillis();
                     StonePut spPacket = requestSpPacket(state.getCurrentIndex());
                     long elapsedTime = System.currentTimeMillis() - startTime;
-                    if (spPacket.timeOut() || (timeout && Math.abs(elapsedTime - spPacket.getTime()) >= 500)) {
+                    if (spPacket.timeOut() || (timeout && Math.abs(elapsedTime + calculateTimeoutMillis(state.getCurrentIndex()) - spPacket.getTime()) >= 500)) {
                         timeout = true;
                         break;
                     } else {

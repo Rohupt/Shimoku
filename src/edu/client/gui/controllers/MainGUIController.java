@@ -1,5 +1,6 @@
 package edu.client.gui.controllers;
 
+import edu.common.packet.server.GameEnd;
 import edu.client.ClientMain;
 import edu.client.EventListener;
 import edu.client.gui.views.BoardPane;
@@ -120,12 +121,12 @@ public class MainGUIController implements Initializable {
     private BoardPane board;
     //</editor-fold>
     
-    private EventListener listener;
     private byte position; // 1 is host, 2 is guest, 0 is not set
     private boolean isBlack;
     private boolean drawOfferSent;
     private boolean interrupted = false;
     private long time;
+    private EventListener listener;
     private StonePut tempSP;
     private Future<StonePut> futureSP;
     private Thread moveThread;
@@ -133,10 +134,6 @@ public class MainGUIController implements Initializable {
     private final Timer timer = new Timer();
     private final long[] times = new long[2];
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    public void setListener(EventListener listener) {
-        this.listener = listener;
-    }
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -158,8 +155,10 @@ public class MainGUIController implements Initializable {
         nameField.textProperty().addListener((v, o, n) -> fieldChanged());
         codeField.textProperty().addListener((v, o, n) -> fieldChanged());
         codeLabel.textProperty().addListener((v, o, n) -> copyBtn.setDisable(codeLabel.getText().isBlank()));
-        gameTimingCheckBox.selectedProperty().addListener((v, o, n) -> gameTimingEnabled());
-        moveTimingCheckBox.selectedProperty().addListener((v, o, n) -> moveTimingEnabled());
+        gameTimingCheckBox.selectedProperty().addListener((v, o, n) -> toggleGameTiming());
+        moveTimingCheckBox.selectedProperty().addListener((v, o, n) -> toggleMoveTiming());
+        boardContainer.widthProperty().addListener((v, o, n) -> resizeCanvas());
+        boardContainer.heightProperty().addListener((v, o, n) -> resizeCanvas());
         parent.widthProperty().addListener((v, o, n) -> {
             boardContainer.setMinWidth(n.intValue() - 200);
             boardContainer.setMaxWidth(n.intValue() - 200);
@@ -168,8 +167,6 @@ public class MainGUIController implements Initializable {
             boardContainer.setMinHeight(n.intValue() - 70);
             boardContainer.setMaxHeight(n.intValue() - 70);
         });
-        boardContainer.widthProperty().addListener((v, o, n) -> resizeCanvas());
-        boardContainer.heightProperty().addListener((v, o, n) -> resizeCanvas());
         
         createBtn.setOnAction(e -> createGame());
         joinBtn.setOnAction(e -> joinGame());
@@ -181,23 +178,48 @@ public class MainGUIController implements Initializable {
         leaveBtn.setOnAction(e -> leaveRoom());
     }
     
-    private void fieldChanged() {
-        createBtn.setDisable(nameField.getText().isBlank());
-        joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
+    //<editor-fold defaultstate="collapsed" desc="Utility Functions">    
+    private void loadSettings() {
+        GameSettings settings = getSettings();
+        sizeComboBox.setValue(settings.getSize());
+        // Avoid showing millisecond values to the user
+        gameTimeComboBox.setValue((int) TimeUnit.MINUTES.convert
+                        (settings.getGameTimeMillis(), TimeUnit.MILLISECONDS));
+        moveTimeComboBox.setValue((int) TimeUnit.SECONDS.convert
+                        (settings.getMoveTimeMillis(), TimeUnit.MILLISECONDS));
+        gameTimingCheckBox.setSelected(settings.gameTimingEnabled());
+        moveTimingCheckBox.setSelected(settings.moveTimingEnabled());
+        loadTimeLabels();
     }
     
-    private void resizeCanvas() {
-        int canvasSize = (int) Math.min(boardContainer.getWidth(), boardContainer.getHeight()) - 12;
-        if (boardContainer.getCenter() instanceof BoardPane) {
-            ((BoardPane) boardContainer.getCenter()).setMinSize(canvasSize, canvasSize);
-            ((BoardPane) boardContainer.getCenter()).setMaxSize(canvasSize, canvasSize);
+    private void loadTimeLabels() {
+        if(getSettings().moveTimingEnabled()) {
+            hostMoveTimeLabel.setText(getTimeString(getSettings().getMoveTimeMillis()));
+            if (ClientMain.getRoom().getGuest() != null)
+                guestMoveTimeLabel.setText(getTimeString(getSettings(). getMoveTimeMillis()));
+            else guestMoveTimeLabel.setText("");
+        } else {
+            hostMoveTimeLabel.setText("∞");
+            if (ClientMain.getRoom().getGuest() != null)
+                guestMoveTimeLabel.setText("∞");
+            else guestMoveTimeLabel.setText("");
+        }
+        if(getSettings().gameTimingEnabled()) {
+            hostGameTimeLabel.setText(getTimeString(getSettings().getGameTimeMillis()));
+            if (ClientMain.getRoom().getGuest() != null)
+                guestGameTimeLabel.setText(getTimeString(getSettings().getGameTimeMillis()));
+            else guestGameTimeLabel.setText("");
+        } else {
+            hostGameTimeLabel.setText("∞");
+            if (ClientMain.getRoom().getGuest() != null)
+                guestGameTimeLabel.setText("∞");
+            else guestGameTimeLabel.setText("");
         }
     }
     
-    private void copyCode() {
-        final ClipboardContent content = new ClipboardContent();
-        content.put(DataFormat.PLAIN_TEXT, codeLabel.getText());
-        Clipboard.getSystemClipboard().setContent(content);
+    private void resetMoveTimeLabels() {
+        hostMoveTimeLabel.setText(getTimeString(getSettings().getMoveTimeMillis()));
+        guestMoveTimeLabel.setText(getTimeString(getSettings(). getMoveTimeMillis()));
     }
     
     private void setPosition(byte p, boolean clearBoard) {
@@ -232,7 +254,7 @@ public class MainGUIController implements Initializable {
             boardContainer.setCenter(board);
         }
     }
-
+    
     private void setInGame(boolean inGame) {
         startBtn.setDisable(inGame);
         drawBtn.setDisable(!inGame);
@@ -241,15 +263,13 @@ public class MainGUIController implements Initializable {
             settingsPane.setDisable(true);
     }
     
-    private void sendObject(Object o) {
-        ClientMain.getClient().sendObject(o);
-    }
-    
     private void switchStartBtn(boolean reset) {
         if (reset) {
             startBtn.setText("Reset Board");
             startBtn.setOnAction(e -> {
-                updateSettings();
+                sendObject(new ResetBoard());
+                resetBoard();
+                notifBoard.appendText("Board reset.\n");
                 switchStartBtn(false);
             });
         } else {
@@ -258,151 +278,8 @@ public class MainGUIController implements Initializable {
         }
     }
     
-    private Alert alert(AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setContentText(content);
-        alert.setHeaderText(null);
-        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons()
-                .add(new Image(this.getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
-        return alert;
-    }
-    
-    private GameSettings getSettings() {
-        return ClientMain.getRoom().getSettings();
-    }
-    
-    private void createGame() {
-        sendObject(new CreateGame(nameField.getText()));
-    }
-    
-    private void joinGame() {
-        sendObject(new JoinGame(codeField.getText(), nameField.getText()));
-    }
-    
-    private void startGame() {
-        sendObject(new StartRequest());
-    }
-    
-    private void leaveRoom() {
-        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to leave the room?");
-        alert.getButtonTypes().clear();
-        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        ButtonType button = alert.showAndWait().get();
-        if (button == ButtonType.YES) {
-            notifBoard.appendText("You left the room.\n");
-            setPosition((byte) 0, true);
-            ClientMain.setRoom(null);
-            sendObject(new LeaveGame());
-        }
-    }
-    
-    private void resetGame() {
-        setInGame(false);
-        drawOfferSent = false;
-        hostGameTimeLabel.setText("");
-        hostMoveTimeLabel.setText("");
-        guestGameTimeLabel.setText("");
-        guestMoveTimeLabel.setText("");
-        turnLabel.setText("");
-        turnLabel.setBackground(new Background(new BackgroundFill(Color.GRAY, CornerRadii.EMPTY, Insets.EMPTY)));
-        drawBtn.setText("Offer Draw");
-        drawBtn.setOnAction(null);
-    }
-    
-    private void loadSettings() {
-        GameSettings settings = getSettings();
-        sizeComboBox.setValue(settings.getSize());
-        // Avoid showing millisecond values to the user
-        gameTimeComboBox.setValue((int) TimeUnit.MINUTES.convert
-                (settings.getGameTimeMillis(), TimeUnit.MILLISECONDS));
-        moveTimeComboBox.setValue((int) TimeUnit.SECONDS.convert
-                (settings.getMoveTimeMillis(), TimeUnit.MILLISECONDS));
-        gameTimingCheckBox.setSelected(settings.gameTimingEnabled());
-        moveTimingCheckBox.setSelected(settings.moveTimingEnabled());
-        loadTimeLabels();
-    }
-    
-    private void resetBoard() {
-        board = new BoardPane(getSettings().getSize());
-        boardContainer.setCenter(board);
-        resizeCanvas();
-        switchStartBtn(false);
-    }
-    
-    private void loadTimeLabels() {
-        if(getSettings().moveTimingEnabled()) {
-            hostMoveTimeLabel.setText(getTimeString(getSettings().getMoveTimeMillis()));
-            if (ClientMain.getRoom().getGuest() != null)
-                guestMoveTimeLabel.setText(getTimeString(getSettings(). getMoveTimeMillis()));
-            else guestMoveTimeLabel.setText("");
-        } else {
-            hostMoveTimeLabel.setText("∞");
-            if (ClientMain.getRoom().getGuest() != null)
-                guestMoveTimeLabel.setText("∞");
-            else guestMoveTimeLabel.setText("");
-        }
-        if(getSettings().gameTimingEnabled()) {
-            hostGameTimeLabel.setText(getTimeString(getSettings().getGameTimeMillis()));
-            if (ClientMain.getRoom().getGuest() != null)
-                guestGameTimeLabel.setText(getTimeString(getSettings().getGameTimeMillis()));
-            else guestGameTimeLabel.setText("");
-        } else {
-            hostGameTimeLabel.setText("∞");
-            if (ClientMain.getRoom().getGuest() != null)
-                guestGameTimeLabel.setText("∞");
-            else guestGameTimeLabel.setText("");
-        }
-    }
-    
-    private void resetMoveTimeLabels() {
-        hostMoveTimeLabel.setText(getTimeString(getSettings().getMoveTimeMillis()));
-        guestMoveTimeLabel.setText(getTimeString(getSettings(). getMoveTimeMillis()));
-    }
-
-    private void gameTimingEnabled() {
-        gameTimeComboBox.setDisable(!gameTimingCheckBox.isSelected());
-        if (gameTimingCheckBox.isSelected())
-            gameTimeComboBox.setValue((int) TimeUnit.MINUTES.convert
-                (getSettings().getGameTimeMillis(), TimeUnit.MILLISECONDS));
-    }
-
-    private void moveTimingEnabled() {
-        moveTimeComboBox.setDisable(!moveTimingCheckBox.isSelected());
-        if (moveTimingCheckBox.isSelected())
-            moveTimeComboBox.setValue((int) TimeUnit.SECONDS.convert
-                (getSettings().getMoveTimeMillis(), TimeUnit.MILLISECONDS));
-    }
-    
-    private void moveTimeChanged(boolean host, long timeMillis) {
-        if (host)
-            hostMoveTimeLabel.setText(getTimeString(timeMillis));
-        else
-            guestMoveTimeLabel.setText(getTimeString(timeMillis));
-    }
-
-    private void gameTimeChanged(boolean host, long timeMillis) {
-        if (host)
-            hostGameTimeLabel.setText(getTimeString(timeMillis));
-        else
-            guestGameTimeLabel.setText(getTimeString(timeMillis));
-    }
-
-    private void updateSettings() {
-        var settings = new GameSettings();
-        settings.setMoveTimeMillis(TimeUnit.MILLISECONDS
-                .convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
-        settings.setMoveTimingEnabled(moveTimingCheckBox.isSelected());
-        settings.setGameTimeMillis(TimeUnit.MILLISECONDS.convert
-                (gameTimeComboBox.getValue(), TimeUnit.MINUTES));
-        settings.setGameTimingEnabled(gameTimingCheckBox.isSelected());
-        settings.setSize(sizeComboBox.getValue());
-        
-        RuleSet rsPacket = new RuleSet(settings.getSize(),
-                settings.gameTimingEnabled() ? settings.getGameTimeMillis() : -1,
-                settings.moveTimingEnabled() ? settings.getMoveTimeMillis() : -1);
-        sendObject(rsPacket);
-        settingsPane.setDisable(true);
+    private void sendObject(Object o) {
+        ClientMain.getClient().sendObject(o);
     }
     
     private void requestMove() {
@@ -418,35 +295,18 @@ public class MainGUIController implements Initializable {
         moveThread.start();
     }
     
-    private void offerDraw() {
-        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to offer a draw?");
-        alert.getButtonTypes().clear();
-        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        ButtonType button = alert.showAndWait().get();
-        if (button == ButtonType.YES) {
-            sendObject(new OfferDraw());
-            notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
-            drawBtn.setDisable(true);
-            drawOfferSent = true;
-        }
+    private void moveTimeChanged(boolean host, long timeMillis) {
+        if (host)
+            hostMoveTimeLabel.setText(getTimeString(timeMillis));
+        else
+            guestMoveTimeLabel.setText(getTimeString(timeMillis));
     }
-    
-    private void drawAgree() {
-        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to accept the offer?");
-        alert.getButtonTypes().clear();
-        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        ButtonType button = alert.showAndWait().get();
-        if (button == ButtonType.YES)
-            sendObject(new DrawAgree());
-    }
-    
-    private void surrender() {
-        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to surrender?");
-        alert.getButtonTypes().clear();
-        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
-        ButtonType button = alert.showAndWait().get();
-        if (button == ButtonType.YES)
-            sendObject(new Surrender());
+
+    private void gameTimeChanged(boolean host, long timeMillis) {
+        if (host)
+            hostGameTimeLabel.setText(getTimeString(timeMillis));
+        else
+            guestGameTimeLabel.setText(getTimeString(timeMillis));
     }
     
     private void sendTimeUpdates(boolean host) {
@@ -475,6 +335,18 @@ public class MainGUIController implements Initializable {
     
     private void stopTimeUpdates() {
         timeUpdateSender.cancel();
+    }
+    
+    private long timeoutMillis() {
+        if(getSettings().moveTimingEnabled() && getSettings().gameTimingEnabled()) {
+            return Math.min(getSettings().getMoveTimeMillis(), times[position - 1]);
+        } else if(getSettings().gameTimingEnabled()) {
+            return times[position - 1];
+        } else if(getSettings().moveTimingEnabled()) {
+            return getSettings().getMoveTimeMillis();
+        } else {
+            return 0;
+        }
     }
     
     private Runnable getRunnable() {
@@ -511,7 +383,7 @@ public class MainGUIController implements Initializable {
             } catch (InterruptedException | ExecutionException | CancellationException ex) {
                 interrupted = true;
             } catch (TimeoutException ex) {
-                sendObject(new StonePut(-1, -1));
+                sendObject(new StonePut(-1, -1, -1));
             } finally {
                 board.setOnMouseClicked(null);
                 //TODO: Stop the clock
@@ -557,18 +429,6 @@ public class MainGUIController implements Initializable {
         return tempSP;
     }
     
-    private long timeoutMillis() {
-        if(getSettings().moveTimingEnabled() && getSettings().gameTimingEnabled()) {
-            return Math.min(getSettings().getMoveTimeMillis(), times[position - 1]);
-        } else if(getSettings().gameTimingEnabled()) {
-            return times[position - 1];
-        } else if(getSettings().moveTimingEnabled()) {
-            return getSettings().getMoveTimeMillis();
-        } else {
-            return 0;
-        }
-    }
-    
     private String getTimeString(long millis) {
         return String.format("%02d:%02d",
             TimeUnit.MILLISECONDS.toMinutes(millis),
@@ -576,14 +436,150 @@ public class MainGUIController implements Initializable {
         );
     }
     
-    private boolean settingIdentical() {
-        return getSettings().getMoveTimeMillis() == TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS)
-            && getSettings().getGameTimeMillis() == TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES)
-            && getSettings().gameTimingEnabled() == gameTimingCheckBox.isSelected()
-            && getSettings().moveTimingEnabled() == moveTimingCheckBox.isSelected()
-            && getSettings().getSize() == sizeComboBox.getValue();
+    private Alert alert(AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setContentText(content);
+        alert.setHeaderText(null);
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons()
+                .add(new Image(this.getClass().getClassLoader().getResource("edu/client/gui/resources/AppIcon.png").toExternalForm()));
+        return alert;
+    }
+    
+    private GameSettings getSettings() {
+        return ClientMain.getRoom().getSettings();
+    }
+    //</editor-fold>
+    
+    //<editor-fold defaultstate="collapsed" desc="Handlers">
+    private void fieldChanged() {
+        createBtn.setDisable(nameField.getText().isBlank());
+        joinBtn.setDisable(nameField.getText().isBlank() || codeField.getText().isBlank());
+    }
+    
+    private void toggleGameTiming() {
+        gameTimeComboBox.setDisable(!gameTimingCheckBox.isSelected());
+        if (gameTimingCheckBox.isSelected())
+            gameTimeComboBox.setValue((int) TimeUnit.MINUTES.convert
+                        (getSettings().getGameTimeMillis(), TimeUnit.MILLISECONDS));
+    }
+    
+    private void toggleMoveTiming() {
+        moveTimeComboBox.setDisable(!moveTimingCheckBox.isSelected());
+        if (moveTimingCheckBox.isSelected())
+            moveTimeComboBox.setValue((int) TimeUnit.SECONDS.convert
+                        (getSettings().getMoveTimeMillis(), TimeUnit.MILLISECONDS));
+    }
+    
+    private void resizeCanvas() {
+        int canvasSize = (int) Math.min(boardContainer.getWidth(), boardContainer.getHeight()) - 12;
+        if (boardContainer.getCenter() instanceof BoardPane) {
+            ((BoardPane) boardContainer.getCenter()).setMinSize(canvasSize, canvasSize);
+            ((BoardPane) boardContainer.getCenter()).setMaxSize(canvasSize, canvasSize);
+        }
+    }
+    
+    private void resetBoard() {
+        board = new BoardPane(getSettings().getSize());
+        boardContainer.setCenter(board);
+        resizeCanvas();
+        switchStartBtn(false);
+    }
+    
+    private void resetGame() {
+        setInGame(false);
+        drawOfferSent = false;
+        hostGameTimeLabel.setText("");
+        hostMoveTimeLabel.setText("");
+        guestGameTimeLabel.setText("");
+        guestMoveTimeLabel.setText("");
+        turnLabel.setText("");
+        turnLabel.setBackground(new Background(new BackgroundFill(Color.GRAY, CornerRadii.EMPTY, Insets.EMPTY)));
+        drawBtn.setText("Offer Draw");
+        drawBtn.setOnAction(null);
+    }
+    
+    private void copyCode() {
+        final ClipboardContent content = new ClipboardContent();
+        content.put(DataFormat.PLAIN_TEXT, codeLabel.getText());
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+    
+    private void createGame() {
+        sendObject(new CreateGame(nameField.getText()));
+    }
+    
+    private void joinGame() {
+        sendObject(new JoinGame(codeField.getText(), nameField.getText()));
     }
 
+    private void updateSettings() {
+        var settings = new GameSettings();
+        settings.setMoveTimeMillis(TimeUnit.MILLISECONDS
+                .convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
+        settings.setMoveTimingEnabled(moveTimingCheckBox.isSelected());
+        settings.setGameTimeMillis(TimeUnit.MILLISECONDS.convert
+                (gameTimeComboBox.getValue(), TimeUnit.MINUTES));
+        settings.setGameTimingEnabled(gameTimingCheckBox.isSelected());
+        settings.setSize(sizeComboBox.getValue());
+        
+        RuleSet rsPacket = new RuleSet(settings.getSize(),
+                settings.gameTimingEnabled() ? settings.getGameTimeMillis() : -1,
+                settings.moveTimingEnabled() ? settings.getMoveTimeMillis() : -1);
+        sendObject(rsPacket);
+        settingsPane.setDisable(true);
+    }
+    
+    private void startGame() {
+        sendObject(new StartRequest());
+    }
+    
+    private void leaveRoom() {
+        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to leave the room?");
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
+        ButtonType button = alert.showAndWait().get();
+        if (button == ButtonType.YES) {
+            notifBoard.appendText("You left the room.\n");
+            setPosition((byte) 0, true);
+            ClientMain.setRoom(null);
+            sendObject(new LeaveGame());
+        }
+    }
+    
+    private void offerDraw() {
+        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to offer a draw?");
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
+        ButtonType button = alert.showAndWait().get();
+        if (button == ButtonType.YES) {
+            sendObject(new OfferDraw());
+            notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
+            drawBtn.setDisable(true);
+            drawOfferSent = true;
+        }
+    }
+    
+    private void drawAgree() {
+        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to accept the offer?");
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
+        ButtonType button = alert.showAndWait().get();
+        if (button == ButtonType.YES)
+            sendObject(new DrawAgree());
+    }
+    
+    private void surrender() {
+        Alert alert = alert(AlertType.CONFIRMATION, "Confirm", "Do you really want to surrender?");
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
+        ButtonType button = alert.showAndWait().get();
+        if (button == ButtonType.YES)
+            sendObject(new Surrender());
+    }
+    //</editor-fold>
+    
+    //<editor-fold defaultstate="collapsed" desc="Packet Handlers">
     public void handleIDPacket(GameID idPacket) {
         Player host = new Player(nameField.getText(), null);
         Room room = new Room();
@@ -599,7 +595,7 @@ public class MainGUIController implements Initializable {
         codeLabel.setText(room.getRoomID());
         loadSettings();
     }
-
+    
     public void handleRuleChanges(RuleSet rsPacket) {
         if (!rsPacket.toGameSettings().equals(getSettings())) {
             ClientMain.getRoom().setSettings(rsPacket.toGameSettings());
@@ -609,20 +605,16 @@ public class MainGUIController implements Initializable {
             notifBoard.appendText("Board reset.\n");
         resetBoard();
     }
-
+    
     public void handleRuleConfirmed(ConfirmRules cfPacket) {
         if (cfPacket.isSuccessful()) {
-            if (!settingIdentical()) {
-                getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
-                getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
-                getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
-                getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
-                getSettings().setSize(sizeComboBox.getValue());
-                loadTimeLabels();
-                notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
-            } else {
-                notifBoard.appendText("Board reset.\n");
-            }
+            getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
+            getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
+            getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
+            getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
+            getSettings().setSize(sizeComboBox.getValue());
+            loadTimeLabels();
+            notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
             if (ClientMain.getRoom().getGuest() != null)
                 resetBoard();
         } else {
@@ -631,7 +623,7 @@ public class MainGUIController implements Initializable {
         }
         settingsPane.setDisable(false);
     }
-
+    
     public void handleGuestFound(GuestFound gfPacket) {
         Player guest = new Player(gfPacket.getUsername(), null);
         ClientMain.getRoom().setGuest(guest);
@@ -641,7 +633,7 @@ public class MainGUIController implements Initializable {
         notifBoard.appendText("GUEST JOINED: User \"" + guest.getUsername() + "\" has joined.\n");
         resetBoard();
     }
-
+    
     public void handleGameInfo(GameInfo giPacket) {
         Player host = new Player(giPacket.getHostUsername(), null);
         Player guest = new Player(nameField.getText(), null);
@@ -660,20 +652,20 @@ public class MainGUIController implements Initializable {
         startBtn.setDisable(true);
         notifBoard.appendText("ACCEPTED: Your request is accepted.\n");
     }
-
+    
     public void handleJoinFailed(JoinFailed jfPacket) {
         if (jfPacket.isFound())
             notifBoard.appendText("DECLINED: Room is full, request declined.\n");
         else
             notifBoard.appendText("NOT FOUND: code invalid, room not found.\n");
     }
-
+    
     public void handleOpponentLeft() {
         notifBoard.appendText("Opponent has left.\n");
         resetGame();
         setPosition((byte) 1, true);
     }
-
+    
     public void handleGameStart(GameStart gsPacket) {
         isBlack = gsPacket.isHostMoveFirst() ? position == 1 : position == 2;
         setInGame(true);
@@ -693,7 +685,7 @@ public class MainGUIController implements Initializable {
             sendTimeUpdates(position == 2);
         }
     }
-
+    
     public void handleOpponentMove(StonePut spPacket) {
         stopTimeUpdates();
         if (getSettings().gameTimingEnabled()) {
@@ -712,7 +704,7 @@ public class MainGUIController implements Initializable {
                 BoardPane.convertMoveAlgebraic(spPacket.getX(), spPacket.getY(), getSettings().getSize())));
         requestMove();
     }
-
+    
     public void handleGameEnd(GameEnd gePacket) {
         board.setOnMouseClicked(null);
         board.disableStonePicker();
@@ -747,11 +739,17 @@ public class MainGUIController implements Initializable {
         if (position == 1)
             switchStartBtn(true);
     }
-
+    
     public void handleDrawOffer() {
         notifBoard.appendText("DRAW OFFERED: Your opponent offered a draw. You can agree to the offer by clicking \"Agree to Offer\", or reject it by continuing making moves.\n");
         drawBtn.setText("Agree to Offer");
         drawBtn.setOnAction(e -> drawAgree());
     }
+    
+    public void handleResetBoard() {
+        resetBoard();
+        notifBoard.appendText("Board reset.\n");
+    }
+    //</editor-fold>
     
 }

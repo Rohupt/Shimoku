@@ -1,6 +1,7 @@
-package edu.common.packet;
+package edu.common.packet.server;
 
 import com.google.gson.annotations.SerializedName;
+import edu.common.packet.Packet;
 
 public class GameEnd extends Packet{
     public enum EndingType { HOST_WON, GUEST_WON, DRAW };

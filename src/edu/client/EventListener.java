@@ -1,5 +1,6 @@
 package edu.client;
 
+import edu.common.packet.server.GameEnd;
 import com.google.gson.Gson;
 import edu.client.gui.controllers.MainGUIController;
 import edu.common.packet.*;
@@ -71,6 +72,9 @@ public class EventListener  {
                     //Offer draw
                     controller.handleDrawOffer();
                     break;
+                case "rb":
+                    //Reset board
+                    controller.handleResetBoard();
             }
         });
         

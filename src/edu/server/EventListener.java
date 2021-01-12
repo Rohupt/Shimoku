@@ -1,5 +1,6 @@
 package edu.server;
 
+import edu.common.packet.server.GameEnd;
 import edu.common.packet.RuleSet;
 import com.google.gson.Gson;
 import edu.common.packet.*;
@@ -33,11 +34,11 @@ public class EventListener {
                 break;
             case "rs":
                 //RuleSet
-                handleRuleSet(gson.fromJson(p,RuleSet.class),con);
+                handleRuleSet(gson.fromJson(p,RuleSet.class), con);
                 break;
             case "jg":
                 //Join Game
-                handleJoinGame(gson.fromJson(p,JoinGame.class),con);
+                handleJoinGame(gson.fromJson(p,JoinGame.class), con);
                 break;
             case "sr":
                 //Start Request
@@ -45,7 +46,7 @@ public class EventListener {
                 break;
             case "sp":
                 //Stone Put
-                handleStonePut(gson.fromJson(p,StonePut.class),con);
+                handleStonePut(gson.fromJson(p,StonePut.class), con);
                 break;
             case "su":
                 //Surrender
@@ -67,6 +68,9 @@ public class EventListener {
             case "ts":
                 //Turn start
                 handleTurnStart(con);
+            case "rb":
+                //Reset board
+                handleResetBoard(gson.fromJson(p, ResetBoard.class), con);
             default:
                 break;
         }
@@ -97,22 +101,20 @@ public class EventListener {
         GameSettings temp = new GameSettings(room.getSettings());
         boolean successed = false;
         try {
-            if (!rsPacket.toGameSettings().equals(room.getSettings())) {
-                room.getSettings().setSize(rsPacket.getSize());
+            room.getSettings().setSize(rsPacket.getSize());
 
-                if (rsPacket.getGameTime() == -1) {
-                    room.getSettings().setGameTimingEnabled(false);
-                } else {
-                    room.getSettings().setGameTimingEnabled(true);
-                    room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
-                }
+            if (rsPacket.getGameTime() == -1) {
+                room.getSettings().setGameTimingEnabled(false);
+            } else {
+                room.getSettings().setGameTimingEnabled(true);
+                room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
+            }
 
-                if (rsPacket.getMoveTime() == -1) {
-                    room.getSettings().setMoveTimingEnabled(false);
-                } else {
-                    room.getSettings().setMoveTimingEnabled(true);
-                    room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
-                }
+            if (rsPacket.getMoveTime() == -1) {
+                room.getSettings().setMoveTimingEnabled(false);
+            } else {
+                room.getSettings().setMoveTimingEnabled(true);
+                room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
             }
             successed = true;
         } catch (Exception e) {
@@ -228,6 +230,10 @@ public class EventListener {
         Game game = con.getRoom().getGame();
         if (game != null)
             game.resumeTurn();
+    }
+
+    private void handleResetBoard(ResetBoard rbPacket, Connection con) {
+        con.getRoom().getGuest().getConnection().sendObject(rbPacket);
     }
 
     private Room findRoom(String roomID){
