@@ -61,7 +61,7 @@ public class Client implements Runnable{
         }
     }
 
-    public void sendObject(Object packet) {
+    public void sendMessage(Object packet) {
         try {
             Gson gson = new Gson();
             String data = gson.toJson(packet);

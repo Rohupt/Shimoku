@@ -30,7 +30,7 @@ public class App extends Application {
         stage.show();
         stage.setOnCloseRequest((WindowEvent t) -> {
             if (ClientMain.getRoom() != null)
-                ClientMain.getClient().sendObject(new LeaveGame());
+                ClientMain.getClient().sendMessage(new LeaveGame());
             ClientMain.getClient().close();
             Platform.exit();
             System.exit(0);

@@ -101,8 +101,8 @@ public class Game {
         return () -> {
             if(state.getMoves().isEmpty()) {
                 GameStart startPacket = new GameStart(hostMoveFirst);
-                this.players[0].getConnection().sendObject(startPacket);
-                this.players[1].getConnection().sendObject(startPacket);
+                this.players[0].getConnection().sendMessage(startPacket);
+                this.players[1].getConnection().sendMessage(startPacket);
             }
 
             boolean timeout = false;
@@ -125,7 +125,7 @@ public class Game {
                             elapsedTime = spPacket.getTime();
                         times[state.getCurrentIndex() - 1] -= elapsedTime;
                         state.makeMove(new Move(spPacket.getX(), spPacket.getY()));
-                        players[state.getCurrentIndex() - 1].getConnection().sendObject(spPacket);
+                        players[state.getCurrentIndex() - 1].getConnection().sendMessage(spPacket);
                     }
                 } catch (InterruptedException ex) {
                     return;
@@ -151,8 +151,8 @@ public class Game {
                         ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON);
                 gameEnd.setReason(GameEnd.ReasonType.BY_TIMEOUT);
             }
-            players[0].getConnection().sendObject(gameEnd);
-            players[1].getConnection().sendObject(gameEnd);
+            players[0].getConnection().sendMessage(gameEnd);
+            players[1].getConnection().sendMessage(gameEnd);
             room.removeGame();
         };
     }

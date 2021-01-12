@@ -66,10 +66,9 @@ public class Connection implements Runnable {
         }
     }
 
-    public void sendObject(Object packet) {
+    public void sendMessage(Object packet) {
         InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
         try {
-//            out.reset();
             Gson gson = new Gson();
             //Convert Object to json and to string
             String data = gson.toJson(packet);

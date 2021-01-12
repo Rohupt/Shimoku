@@ -279,7 +279,7 @@ public class MainGUIController implements Initializable {
     }
     
     private void sendObject(Object o) {
-        ClientMain.getClient().sendObject(o);
+        ClientMain.getClient().sendMessage(o);
     }
     
     private void requestMove() {
