@@ -30,7 +30,7 @@ public class Server implements Runnable{
         Connection connection = new Connection(socket, id);
         new Thread(connection).start();
         InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
-        System.out.printf("Client connected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());
+        System.out.printf("\nClient connected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());
         id++;
     }
 

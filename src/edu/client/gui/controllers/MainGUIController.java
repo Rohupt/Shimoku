@@ -267,7 +267,7 @@ public class MainGUIController implements Initializable {
         if (reset) {
             startBtn.setText("Reset Board");
             startBtn.setOnAction(e -> {
-                sendObject(new ResetBoard());
+                sendMessage(new ResetBoard());
                 resetBoard();
                 notifBoard.appendText("Board reset.\n");
                 switchStartBtn(false);
@@ -278,12 +278,12 @@ public class MainGUIController implements Initializable {
         }
     }
     
-    private void sendObject(Object o) {
+    private void sendMessage(Packet o) {
         ClientMain.getClient().sendMessage(o);
     }
     
     private void requestMove() {
-        sendObject(new TurnStart());
+        sendMessage(new TurnStart());
         sendTimeUpdates(position == 1);
         int player = isBlack ? 1 : 2;
         board.enableStonePicker(player);
@@ -349,6 +349,14 @@ public class MainGUIController implements Initializable {
         }
     }
     
+    private boolean settingIdentical() {
+        return getSettings().gameTimingEnabled() == gameTimingCheckBox.isSelected()
+            && getSettings().moveTimingEnabled() == moveTimingCheckBox.isSelected()
+            && getSettings().getGameTimeMillis() == TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES)
+            && getSettings().getMoveTimeMillis() == TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.MINUTES)
+            && getSettings().getSize() == sizeComboBox.getValue();
+    }
+    
     private Runnable getRunnable() {
         return () -> {
             tempSP = null;
@@ -375,15 +383,15 @@ public class MainGUIController implements Initializable {
                 
             try {    
                 if (timeoutMillis() > 0)
-                    sendObject(futureSP.get(timeoutMillis(), TimeUnit.MILLISECONDS));
+                    sendMessage(futureSP.get(timeoutMillis(), TimeUnit.MILLISECONDS));
                 else
-                    sendObject(futureSP.get());
+                    sendMessage(futureSP.get());
                 board.addStone(isBlack ? 1 : 2, tempSP.getX(), tempSP.getY(), false);
                 notifBoard.appendText(String.format("Your move: %s\n", BoardPane.convertMoveAlgebraic(tempSP.getX(), tempSP.getY(), getSettings().getSize())));
             } catch (InterruptedException | ExecutionException | CancellationException ex) {
                 interrupted = true;
             } catch (TimeoutException ex) {
-                sendObject(new StonePut(-1, -1, -1));
+                sendMessage(new StonePut(-1, -1, -1));
             } finally {
                 board.setOnMouseClicked(null);
                 //TODO: Stop the clock
@@ -506,11 +514,11 @@ public class MainGUIController implements Initializable {
     }
     
     private void createGame() {
-        sendObject(new CreateGame(nameField.getText()));
+        sendMessage(new CreateGame(nameField.getText()));
     }
     
     private void joinGame() {
-        sendObject(new JoinGame(codeField.getText(), nameField.getText()));
+        sendMessage(new JoinGame(codeField.getText(), nameField.getText()));
     }
 
     private void updateSettings() {
@@ -526,12 +534,12 @@ public class MainGUIController implements Initializable {
         RuleSet rsPacket = new RuleSet(settings.getSize(),
                 settings.gameTimingEnabled() ? settings.getGameTimeMillis() : -1,
                 settings.moveTimingEnabled() ? settings.getMoveTimeMillis() : -1);
-        sendObject(rsPacket);
+        sendMessage(rsPacket);
         settingsPane.setDisable(true);
     }
     
     private void startGame() {
-        sendObject(new StartRequest());
+        sendMessage(new StartRequest());
     }
     
     private void leaveRoom() {
@@ -543,7 +551,7 @@ public class MainGUIController implements Initializable {
             notifBoard.appendText("You left the room.\n");
             setPosition((byte) 0, true);
             ClientMain.setRoom(null);
-            sendObject(new LeaveGame());
+            sendMessage(new LeaveGame());
         }
     }
     
@@ -553,7 +561,7 @@ public class MainGUIController implements Initializable {
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES) {
-            sendObject(new OfferDraw());
+            sendMessage(new OfferDraw());
             notifBoard.appendText("OFFER SENT: You sent an offer for a draw, but the match WILL CONTINUE until the opponent answers or being concluded in another way.\n");
             drawBtn.setDisable(true);
             drawOfferSent = true;
@@ -566,7 +574,7 @@ public class MainGUIController implements Initializable {
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES)
-            sendObject(new DrawAgree());
+            sendMessage(new DrawAgree());
     }
     
     private void surrender() {
@@ -575,7 +583,7 @@ public class MainGUIController implements Initializable {
         alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
         ButtonType button = alert.showAndWait().get();
         if (button == ButtonType.YES)
-            sendObject(new Surrender());
+            sendMessage(new Surrender());
     }
     //</editor-fold>
     
@@ -608,13 +616,16 @@ public class MainGUIController implements Initializable {
     
     public void handleRuleConfirmed(ConfirmRules cfPacket) {
         if (cfPacket.isSuccessful()) {
-            getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
-            getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
-            getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
-            getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
-            getSettings().setSize(sizeComboBox.getValue());
-            loadTimeLabels();
-            notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
+                getSettings().setMoveTimeMillis(TimeUnit.MILLISECONDS.convert(moveTimeComboBox.getValue(), TimeUnit.SECONDS));
+                getSettings().setMoveTimingEnabled(moveTimingCheckBox.isSelected());
+                getSettings().setGameTimeMillis(TimeUnit.MILLISECONDS.convert(gameTimeComboBox.getValue(), TimeUnit.MINUTES));
+                getSettings().setGameTimingEnabled(gameTimingCheckBox.isSelected());
+                getSettings().setSize(sizeComboBox.getValue());
+                loadTimeLabels();
+            if (settingIdentical()) {
+                notifBoard.appendText("SUCCESS: Game rules changed successfully.\n");
+            } else
+                notifBoard.appendText("Board reset.\n");
             if (ClientMain.getRoom().getGuest() != null)
                 resetBoard();
         } else {

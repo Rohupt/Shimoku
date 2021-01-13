@@ -1,6 +1,7 @@
 package edu.client;
 
 import com.google.gson.Gson;
+import edu.common.packet.Packet;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -61,11 +62,11 @@ public class Client implements Runnable{
         }
     }
 
-    public void sendMessage(Object packet) {
+    public void sendMessage(Packet packet) {
         try {
             Gson gson = new Gson();
             String data = gson.toJson(packet);
-            System.out.printf("Sent a packet:\n\t%s\n", data);
+            System.out.printf("\n%s sent:\n\t%s\n", packet.getPacketName(), data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {

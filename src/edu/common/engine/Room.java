@@ -63,6 +63,7 @@ public class Room {
     
     public void removeGame() {
         this.game = null;
+        System.out.println("\t\tGame trashed: " + this.roomID);
     }
     
     public void newGame(GameSettings settings) {
@@ -70,5 +71,6 @@ public class Room {
         newGame.setPlayer1(host);
         newGame.setPlayer2(guest);
         this.game = newGame;
+        System.out.println("\t\tNew game created: " + this.roomID);
     }
 }

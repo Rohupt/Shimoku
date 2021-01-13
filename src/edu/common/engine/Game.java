@@ -17,6 +17,7 @@ public class Game {
     private final Thread gameThread;
     private GameState state;
     private final Room room;
+    private boolean ready;
 
     public Game(GameSettings gameSettings, Room room) {
         this.settings = gameSettings;
@@ -34,6 +35,8 @@ public class Game {
             this.state = new GameState(settings.getSize());
             times[0] = settings.getGameTimeMillis();
             times[1] = settings.getGameTimeMillis();
+            System.out.println("\t\tGame thread started: " + room.getRoomID());
+            ready = false;
             this.gameThread.start();
         }
     }
@@ -46,9 +49,11 @@ public class Game {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if(!futureSpPacket.isDone()) {
-                futureSpPacket.cancel(true);
-            }
+            if (futureSpPacket != null)
+                if(!futureSpPacket.isDone()) {
+                    futureSpPacket.cancel(true);
+                }
+            System.out.println("\t\tGame thread stopped: ");
         }
     }
 
@@ -59,7 +64,7 @@ public class Game {
     private StonePut requestSpPacket(int playerIndex) throws InterruptedException, ExecutionException, TimeoutException {
         Player player = players[playerIndex - 1];
         long timeout = calculateTimeoutMillis(playerIndex);
-        this.futureSpPacket = executor.submit(() -> player.getSpPacket());
+        this.futureSpPacket = executor.submit(() -> player.getSpPacket()); System.out.println("\t\tWaiting for player move");
 
         if (timeout > 0) {
             try {
@@ -111,11 +116,17 @@ public class Game {
                 try {
                     if (!timeout)
                         synchronized (Thread.currentThread()) {
+                            ready = true;
+                            System.out.println("\t\tWaiting for turn start signal");
+                            synchronized (this.players[state.getCurrentIndex() - 1].getConnection().getListener()) {
+                                this.players[state.getCurrentIndex() - 1].getConnection().getListener().notify();
+                            }
                             Thread.currentThread().wait();
                         }
-                    
+                    System.out.println("\t\tContinuing.");
                     long startTime = System.currentTimeMillis();
                     StonePut spPacket = requestSpPacket(state.getCurrentIndex());
+                    System.out.println("\t\tMove packet received.");
                     long elapsedTime = System.currentTimeMillis() - startTime;
                     if (spPacket.timeOut() || (timeout && Math.abs(elapsedTime + calculateTimeoutMillis(state.getCurrentIndex()) - spPacket.getTime()) >= 500)) {
                         timeout = true;
@@ -127,6 +138,7 @@ public class Game {
                         state.makeMove(new Move(spPacket.getX(), spPacket.getY()));
                         players[state.getCurrentIndex() - 1].getConnection().sendMessage(spPacket);
                     }
+                    ready = false;
                 } catch (InterruptedException ex) {
                     return;
                 } catch (ExecutionException ex) {
@@ -136,23 +148,23 @@ public class Game {
                     timeout = true;
                 }
             }
-            if (players[0].getConnection() == null || players[1].getConnection() == null)
-                return;
-            GameEnd gameEnd = new GameEnd();
-            if (state.terminal() == 1 || state.terminal() == 2) {
-                gameEnd.setEndingType((hostMoveFirst ? state.terminal() == 1 : state.terminal() == 2)
-                        ? GameEnd.EndingType.HOST_WON : GameEnd.EndingType.GUEST_WON);
-                gameEnd.setReason(GameEnd.ReasonType.BY_WINNING_MOVE);
-            }else if (state.terminal() == 3){
-                gameEnd.setEndingType(GameEnd.EndingType.DRAW);
-                gameEnd.setReason(GameEnd.ReasonType.BY_BOARD_FULL);
-            }else if (timeout) {
-                gameEnd.setEndingType((hostMoveFirst ? state.getCurrentIndex() == 1 : state.getCurrentIndex() == 2)
-                        ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON);
-                gameEnd.setReason(GameEnd.ReasonType.BY_TIMEOUT);
+            if (players[0].getConnection() != null && players[1].getConnection() != null) {
+                GameEnd gameEnd = new GameEnd();
+                if (state.terminal() == 1 || state.terminal() == 2) {
+                    gameEnd.setEndingType((hostMoveFirst ? state.terminal() == 1 : state.terminal() == 2)
+                            ? GameEnd.EndingType.HOST_WON : GameEnd.EndingType.GUEST_WON);
+                    gameEnd.setReason(GameEnd.ReasonType.BY_WINNING_MOVE);
+                }else if (state.terminal() == 3){
+                    gameEnd.setEndingType(GameEnd.EndingType.DRAW);
+                    gameEnd.setReason(GameEnd.ReasonType.BY_BOARD_FULL);
+                }else if (timeout) {
+                    gameEnd.setEndingType((hostMoveFirst ? state.getCurrentIndex() == 1 : state.getCurrentIndex() == 2)
+                            ? GameEnd.EndingType.GUEST_WON : GameEnd.EndingType.HOST_WON);
+                    gameEnd.setReason(GameEnd.ReasonType.BY_TIMEOUT);
+                }
+                players[0].getConnection().sendMessage(gameEnd);
+                players[1].getConnection().sendMessage(gameEnd);
             }
-            players[0].getConnection().sendMessage(gameEnd);
-            players[1].getConnection().sendMessage(gameEnd);
             room.removeGame();
         };
     }
@@ -193,5 +205,9 @@ public class Game {
 
     public boolean isHostMoveFirst() {
         return hostMoveFirst;
+    }
+
+    public boolean isReady() {
+        return ready;
     }
 }

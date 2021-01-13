@@ -23,61 +23,68 @@ public class EventListener  {
             e.printStackTrace();
         }
         String packetID = (String) packetJson.get("id");
-        System.out.printf("Received a packet:\n\t%s\n", p);
 
-        Gson gson = new Gson();
         Platform.runLater(() -> {
             switch (packetID) {
                 case "id":
                     //Game ID
-                    controller.handleIDPacket(gson.fromJson(p, GameID.class));
+                    controller.handleIDPacket(logPacket(p, GameID.class));
                     break;
                 case "rs":
                     //Rule set
-                    controller.handleRuleChanges(gson.fromJson(p, RuleSet.class));
+                    controller.handleRuleChanges(logPacket(p, RuleSet.class));
                     break;
                 case "cr":
                     //Confirm rule changes
-                    controller.handleRuleConfirmed(gson.fromJson(p, ConfirmRules.class));
+                    controller.handleRuleConfirmed(logPacket(p, ConfirmRules.class));
                     break;
                 case "gf":
                     //Guest found
-                    controller.handleGuestFound(gson.fromJson(p, GuestFound.class));
+                    controller.handleGuestFound(logPacket(p, GuestFound.class));
                     break;
                 case "gi":
                     //Game info
-                    controller.handleGameInfo(gson.fromJson(p, GameInfo.class));
+                    controller.handleGameInfo(logPacket(p, GameInfo.class));
                     break;
                 case "jf":
                     //Join game request failed, room is full or not found
-                    controller.handleJoinFailed(gson.fromJson(p, JoinFailed.class));
+                    controller.handleJoinFailed(logPacket(p, JoinFailed.class));
                     break;
                 case "gs":
                     //Game start
-                    controller.handleGameStart(gson.fromJson(p, GameStart.class));
+                    controller.handleGameStart(logPacket(p, GameStart.class));
                     break;
                 case "sp":
                     //Opponent move
-                    controller.handleOpponentMove(gson.fromJson(p, StonePut.class));
+                    controller.handleOpponentMove(logPacket(p, StonePut.class));
                     break;
                 case "ge":
                     //Game end
-                    controller.handleGameEnd(gson.fromJson(p, GameEnd.class));
+                    controller.handleGameEnd(logPacket(p, GameEnd.class));
                     break;
                 case "ol":
                     //Opponent left
+                    logPacket(p, OpponentLeft.class);
                     controller.handleOpponentLeft();
                     break;
                 case "od":
                     //Offer draw
+                    logPacket(p, OfferDraw.class);
                     controller.handleDrawOffer();
                     break;
                 case "rb":
                     //Reset board
+                    logPacket(p, ResetBoard.class);
                     controller.handleResetBoard();
             }
         });
         
+    }
+    
+    public <T extends Packet> T logPacket(String p, Class<T> type) {
+        T pkt = new Gson().fromJson(p, type);
+        System.out.printf("\n%s received:\n\t%s\n", pkt.getPacketName(), p);
+        return pkt;
     }
 
     public MainGUIController getController() {

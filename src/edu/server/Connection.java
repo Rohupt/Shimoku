@@ -2,6 +2,7 @@ package edu.server;
 
 import com.google.gson.Gson;
 import edu.common.engine.Room;
+import edu.common.packet.Packet;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -44,7 +45,7 @@ public class Connection implements Runnable {
 //              Execute object received
                 listener.received_data(data, this);
             } catch (IOException e) {
-                System.out.printf("Client disconnected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());
+                System.out.printf("\nClient disconnected: %s:%d\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort());
                 break;
             }
         }
@@ -66,13 +67,13 @@ public class Connection implements Runnable {
         }
     }
 
-    public void sendMessage(Object packet) {
+    public void sendMessage(Packet packet) {
         InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
         try {
             Gson gson = new Gson();
             //Convert Object to json and to string
             String data = gson.toJson(packet);
-            System.out.printf("Sent a packet: %s:%s\n\t%s\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), data);
+            System.out.printf("\n%s to %s:%s\n\t%s\n", packet.getPacketName(), remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), data);
             out.writeUTF(data);
             out.flush();
         } catch (IOException e) {

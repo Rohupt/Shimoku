@@ -24,56 +24,67 @@ public class EventListener {
         }
         InetSocketAddress remoteAddress = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
         String packetID = (String) packetJson.get("id");
-        System.out.printf("Received a packet: %s:%s\n\t%s\n", remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), p);
-
-        Gson gson = new Gson();
+        
         switch (packetID){
             case "cg":
                 //Create Game
-                handleCreateGame(gson.fromJson(p,CreateGame.class), con);
+                handleCreateGame(logPacket(con, p, CreateGame.class), con);
                 break;
             case "rs":
                 //RuleSet
-                handleRuleSet(gson.fromJson(p,RuleSet.class), con);
+                handleRuleSet(logPacket(con, p, RuleSet.class), con);
                 break;
             case "jg":
                 //Join Game
-                handleJoinGame(gson.fromJson(p,JoinGame.class), con);
+                handleJoinGame(logPacket(con, p, JoinGame.class), con);
                 break;
             case "sr":
                 //Start Request
+                logPacket(con, p, StartRequest.class);
                 handleStartRequest(con);
                 break;
             case "sp":
                 //Stone Put
-                handleStonePut(gson.fromJson(p,StonePut.class), con);
+                handleStonePut(logPacket(con, p, StonePut.class), con);
                 break;
             case "su":
                 //Surrender
-                // If a player surrender -> GameEnd
+                logPacket(con, p, Surrender.class);
                 handleSurPacket(con);
                 break;
             case "lg":
                 //Leave Game
+                logPacket(con, p, LeaveGame.class);
                 handleLeaveGame(con);
                 break;
             case "od":
                 //Offer Draw
+                logPacket(con, p, OfferDraw.class);
                 handleDrawOffer(con);
                 break;
             case "da":
                 //Draw Agree
+                logPacket(con, p, DrawAgree.class);
                 handleDrawAgree(con);
                 break;
             case "ts":
                 //Turn start
+                logPacket(con, p, TurnStart.class);
                 handleTurnStart(con);
+                break;
             case "rb":
                 //Reset board
-                handleResetBoard(gson.fromJson(p, ResetBoard.class), con);
+                handleResetBoard(logPacket(con, p, ResetBoard.class), con);
             default:
                 break;
         }
+    }
+    
+    public <T extends Packet> T logPacket(Connection con, String p, Class<T> type) {
+        InetSocketAddress remoteAddress = (InetSocketAddress) con.getSocket().getRemoteSocketAddress();
+        T pkt = new Gson().fromJson(p, type);
+        System.out.printf("\n%s from %s:%s\n\t%s\n", pkt.getPacketName(), remoteAddress.getAddress().getHostAddress(), remoteAddress.getPort(), p);
+        return pkt;
     }
 
     public void handleCreateGame(CreateGame cgPacket,Connection con){
@@ -99,31 +110,33 @@ public class EventListener {
         //Only host client can set rule
         Room room = con.getRoom();
         GameSettings temp = new GameSettings(room.getSettings());
-        boolean successed = false;
+        boolean succeeded = false;
         try {
-            room.getSettings().setSize(rsPacket.getSize());
+            if (!rsPacket.toGameSettings().equals(room.getSettings())) {
+                room.getSettings().setSize(rsPacket.getSize());
 
-            if (rsPacket.getGameTime() == -1) {
-                room.getSettings().setGameTimingEnabled(false);
-            } else {
-                room.getSettings().setGameTimingEnabled(true);
-                room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
-            }
+                if (rsPacket.getGameTime() == -1) {
+                    room.getSettings().setGameTimingEnabled(false);
+                } else {
+                    room.getSettings().setGameTimingEnabled(true);
+                    room.getSettings().setGameTimeMillis(rsPacket.getGameTime());
+                }
 
-            if (rsPacket.getMoveTime() == -1) {
-                room.getSettings().setMoveTimingEnabled(false);
-            } else {
-                room.getSettings().setMoveTimingEnabled(true);
-                room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
+                if (rsPacket.getMoveTime() == -1) {
+                    room.getSettings().setMoveTimingEnabled(false);
+                } else {
+                    room.getSettings().setMoveTimingEnabled(true);
+                    room.getSettings().setMoveTimeMillis(rsPacket.getMoveTime());
+                }
             }
-            successed = true;
+            succeeded = true;
         } catch (Exception e) {
             System.out.println("Rules changes failed");
             room.setSettings(temp);
         }
-        con.sendMessage(new ConfirmRules(successed));
+        con.sendMessage(new ConfirmRules(succeeded));
 
-        if (room.getGuest() != null && successed) {
+        if (room.getGuest() != null && succeeded) {
             // end RuleSet packet to guest client
             room.getGuest().getConnection().sendMessage(rsPacket);
         }
@@ -228,8 +241,20 @@ public class EventListener {
 
     private void handleTurnStart(Connection con) {
         Game game = con.getRoom().getGame();
-        if (game != null)
+        if (game != null) {
+            if (!game.isReady()) {
+                try {
+                    synchronized (this) {
+                        this.wait();
+                        System.out.println("\t\tGame thread signal not ready yet. Please wait.");
+                    }
+                } catch (InterruptedException ex) {
+                }
+                System.out.println("\t\tGame thread is ready.");
+            }
             game.resumeTurn();
+        } else
+            System.out.println("\t\tGame already ended.");
     }
 
     private void handleResetBoard(ResetBoard rbPacket, Connection con) {
